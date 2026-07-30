@@ -1,0 +1,139 @@
+# Architecture
+
+## The one-sentence version
+
+Sable is a purpose-built browser that loads Discord's web application and
+enforces privacy and security policy from outside the page, where the page
+cannot see or subvert it.
+
+## Process and view layout
+
+```
+main process  ── privileged. Owns config, policy, sessions, filtering.
+   │
+   └── BaseWindow
+        ├── WebContentsView  (profile "work"   → persist:sable-a1b2)  ← Discord, NO preload
+        ├── WebContentsView  (profile "canary" → persist:sable-c3d4)  ← Discord, NO preload
+        └── WebContentsView  (shell UI, file://, partition "sable-shell") ← our settings panel
+```
+
+Only one profile view is attached to the window at a time; switching profiles
+swaps which child view is mounted rather than reloading anything, so background
+profiles keep their gateway connection and unread state.
+
+The shell view is added on top when the panel opens and removed when it closes.
+It is transparent, so Discord stays visible behind it.
+
+### Why the Discord view has no preload
+
+Nothing of ours runs inside Discord's page. There is no `contextBridge`, no
+injected script, no IPC channel reachable from that renderer.
+
+This is the single most important decision in the codebase and it buys three
+things at once:
+
+1. **Security.** A renderer compromise — a malicious embed, a Chromium 0-day —
+   finds no bridge to the main process, because there is not one.
+2. **Honesty.** "We do not modify Discord" is verifiable by reading
+   `src/main/window.ts` and observing the absence of a `preload` key, rather
+   than by trusting a claim about what the injected code does.
+3. **Policy integrity.** Every rule is enforced in the main process. A page
+   that wanted to disable Ghost Mode has nothing to call.
+
+The cost is that features requiring page context — themes that need DOM
+knowledge, plugins, patched components — are out of scope by construction.
+That is a deliberate trade, not an oversight. User CSS is supported via
+`webContents.insertCSS`, which injects styles and never script.
+
+### Why profiles are sessions, not tabs
+
+A profile owns a Chromium session partition: its own cookies, localStorage,
+IndexedDB, cache and service workers. Two profiles are two identities that
+cannot observe each other, which is what makes "work account on Stable,
+personal on Canary" meaningful rather than cosmetic.
+
+Ephemeral profiles use an in-memory partition — everything vanishes on close.
+
+Partition names are *derived* from the profile id (`src/common/profile.ts`),
+never stored, and the id is stripped to `[A-Za-z0-9_-]`. A hand-edited config
+cannot point a profile at an attacker-chosen partition.
+
+## Module map
+
+| Path | Responsibility |
+| --- | --- |
+| `src/common/` | Pure logic, no Electron import. Directly unit-testable. |
+| `src/common/policy.ts` | The policy type, the three presets, and `normalizePolicy` |
+| `src/common/rules.ts` | The request classifier — the whole blocking behaviour |
+| `src/common/ua.ts` | User-agent and client-hint normalization |
+| `src/common/portable.ts` | Where state should live |
+| `src/common/ipc.ts` | The complete IPC surface, in one file |
+| `src/main/security/` | Session hardening, permissions, navigation containment |
+| `src/main/privacy/ledger.ts` | The Privacy Inspector's in-memory record |
+| `src/main/reliability/` | Crash, hang and network recovery |
+| `src/preload/shell.ts` | The only bridge, attached only to our own UI |
+| `src/renderer/` | The settings panel. No `innerHTML` anywhere. |
+
+The `common` / `main` split is load-bearing: everything that decides *what the
+client does* lives in `common` and is tested without launching Electron. A
+privacy claim you cannot test is a marketing claim.
+
+## Startup order
+
+Order is not arbitrary and getting it wrong is the classic way an app claims to
+be portable while writing to `~/.config`:
+
+1. `initializePaths()` — resolve the data directory. Chromium captures its
+   paths during startup, so this must precede everything.
+2. `openConfig()` — read and re-validate config from disk.
+3. `applyChromiumSwitches(policy)` — command-line switches must be set before
+   `app.whenReady()`.
+4. Single-instance lock, then windows.
+
+Because switches are process-wide and set before a profile is chosen, they are
+driven by the **global** policy only. Per-profile overrides govern request
+filtering, permissions and headers, but not WebRTC policy. This asymmetry is
+real and is documented in `docs/PRIVACY.md` rather than papered over.
+
+## Request pipeline
+
+Every request in a profile session passes through:
+
+```
+onBeforeRequest  → classify(facts, policy) → block + record in ledger, or continue
+onBeforeSendHeaders → normalize client hints, minimize Referer, add Sec-GPC
+```
+
+`classify` is pure and lives in `common/rules.ts`. The Electron layer does
+nothing but supply facts and act on the verdict, which means the entire
+blocking policy is covered by `test/rules.test.ts` without a browser.
+
+## Reliability
+
+Four failure modes, one behaviour: back off, then reload.
+
+- `render-process-gone` — the renderer crashed
+- `unresponsive` / `responsive` — the page is hung
+- `did-fail-load` on the main frame — a load failed
+- `powerMonitor` resume and a network-online poll — the socket died while away
+
+Backoff doubles to a 60 s cap and resets on a successful load. `ERR_ABORTED`
+and `ERR_BLOCKED_BY_CLIENT` are explicitly *not* failures: the first is every
+SPA route change, and the second is our own filter doing its job — retrying it
+would spin forever and inflate the Privacy Inspector's numbers.
+
+## Build
+
+- TypeScript compiles `src` and `test` to `dist/`.
+- The preload is then **bundled** by esbuild. This is a correctness
+  requirement, not an optimization: a sandboxed preload's `require` can only
+  resolve `electron` and a few node builtins, so a relative import of the
+  shared IPC contract throws at load time and the bridge silently never
+  appears. Bundling lets the preload share one source of truth for channel
+  names while shipping as a single loadable file.
+- Renderer HTML and CSS are copied.
+- `electron-builder` packages, and `build/afterPack.cjs` flips Electron fuses.
+
+There are **zero runtime dependencies**. Everything in `node_modules` is a
+build-time tool. The supply chain that reaches a user's machine is Electron
+and our own code.

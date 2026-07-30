@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!--
+      The panel is local-only. Nothing here is allowed to reach the network,
+      inline a script, or frame anything, so the policy can be maximally tight.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none';"
+    />
+    <title>Sable</title>
+    <link rel="stylesheet" href="shell.css" />
+  </head>
+  <body>
+    <div id="backdrop"></div>
+
+    <main id="panel" role="dialog" aria-label="Sable settings">
+      <nav id="tabs">
+        <button data-pane="profiles" class="tab active">Profiles</button>
+        <button data-pane="privacy" class="tab">Privacy</button>
+        <button data-pane="inspector" class="tab">Inspector</button>
+        <button data-pane="about" class="tab">About</button>
+        <span class="spacer"></span>
+        <button id="close" title="Close (Esc)" aria-label="Close">✕</button>
+      </nav>
+
+      <section class="pane" data-pane="profiles">
+        <p class="hint">
+          Each profile is a separate browser session — its own cookies, storage and
+          login. Profiles cannot see each other.
+        </p>
+        <ul id="profile-list"></ul>
+
+        <form id="new-profile">
+          <h3>New profile</h3>
+          <div class="row">
+            <input id="new-name" type="text" placeholder="Name" maxlength="48" />
+            <select id="new-channel">
+              <option value="stable">Stable</option>
+              <option value="ptb">PTB</option>
+              <option value="canary">Canary</option>
+            </select>
+          </div>
+          <label class="check">
+            <input id="new-ephemeral" type="checkbox" />
+            <span>Ephemeral — discard the session entirely on exit</span>
+          </label>
+          <button type="submit" class="primary">Create profile</button>
+        </form>
+      </section>
+
+      <section class="pane hidden" data-pane="privacy">
+        <div id="presets" class="presets"></div>
+        <p class="hint" id="preset-note"></p>
+        <div id="toggles"></div>
+      </section>
+
+      <section class="pane hidden" data-pane="inspector">
+        <p class="hint">
+          Everything Sable has blocked since launch. This list lives in memory only
+          and is never written to disk.
+        </p>
+        <div id="totals" class="totals"></div>
+        <div class="row end">
+          <button id="clear-ledger">Clear</button>
+        </div>
+        <ul id="ledger"></ul>
+      </section>
+
+      <section class="pane hidden" data-pane="about">
+        <h3>Sable</h3>
+        <p class="hint">
+          A hardened browser shell around Discord's web application. It does not
+          modify Discord, inject scripts into it, or speak to the Discord API on
+          your behalf.
+        </p>
+        <dl id="about-facts"></dl>
+      </section>
+    </main>
+
+    <script src="shell.js"></script>
+  </body>
+</html>
