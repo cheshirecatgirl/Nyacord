@@ -33,6 +33,11 @@ export function buildMenu(shell: AppShell): void {
           click: () => shell.openPanel("network"),
         },
         {
+          label: "Appearance…",
+          accelerator: "CmdOrCtrl+Shift+A",
+          click: () => shell.openPanel("appearance"),
+        },
+        {
           label: "Privacy inspector…",
           accelerator: "CmdOrCtrl+Shift+I",
           click: () => shell.openPanel("inspector"),

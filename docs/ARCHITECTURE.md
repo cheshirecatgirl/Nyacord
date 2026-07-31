@@ -67,6 +67,7 @@ cannot point a profile at an attacker-chosen partition.
 | `src/common/rules.ts` | The request classifier — the whole blocking behaviour |
 | `src/common/ua.ts` | User-agent and client-hint normalization |
 | `src/common/network.ts` | Proxy and secure-DNS configuration and validation |
+| `src/common/appearance.ts` | Layout mode, chat folders, and channel-path validation |
 | `src/common/portable.ts` | Where state should live |
 | `src/common/ipc.ts` | The complete IPC surface, in one file |
 | `src/main/config.ts` | On-disk shape, re-validated on load. Holds the global DNS setting, which is not part of `policy` because the host resolver is process-wide and can never be per-profile |

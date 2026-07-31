@@ -1,5 +1,10 @@
 import { balancedPolicy, normalizePolicy, type PrivacyPolicy } from "../common/policy";
 import { isChannelId } from "../common/channels";
+import {
+  defaultAppearance,
+  normalizeAppearance,
+  type AppearanceConfig,
+} from "../common/appearance";
 import { defaultDns, normalizeDns, normalizeProxy, type DnsConfig } from "../common/network";
 import type { Profile } from "../common/profile";
 import { configFile } from "./paths";
@@ -24,6 +29,7 @@ export interface SableConfig {
    * preset does not silently reset a network decision the user made once.
    */
   dns: DnsConfig;
+  appearance: AppearanceConfig;
   profiles: Profile[];
   activeProfileId: string | null;
   window: WindowBounds;
@@ -42,6 +48,7 @@ export function defaultConfig(): SableConfig {
      * resolver supports it; naming a server is opt-in.
      */
     dns: defaultDns(),
+    appearance: defaultAppearance(),
     profiles: [],
     activeProfileId: null,
     window: { width: 1280, height: 800, maximized: false },
@@ -75,6 +82,7 @@ function sanitize(config: SableConfig): SableConfig {
     version: CONFIG_VERSION,
     policy: normalizePolicy(config.policy),
     dns: normalizeDns(config.dns),
+    appearance: normalizeAppearance(config.appearance),
     profiles,
     activeProfileId,
     window: {

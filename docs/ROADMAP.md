@@ -22,8 +22,12 @@ Honest status. What exists, what does not, and what will never exist.
 - Electron fuses, hardened macOS entitlements, atomic config writes
 - Close-to-tray: closing hides the window so the connection and notifications
   survive, and quitting stays explicit
-- 63 unit tests over the pure policy, rule and network modules
-- 16 end-to-end tests that launch the real app, committed and wired into CI
+- Settings panel with a grouped sidebar: Profiles, Privacy &amp; Security,
+  Network, Inspector, Appearance, About
+- Unified/Classic layout setting with live in-panel previews, plus chat folders
+  (see below for exactly how far this goes)
+- 76 unit tests over the pure policy, rule, network and appearance modules
+- 20 end-to-end tests that launch the real app, committed and wired into CI
 
 The end-to-end suite is the one that matters for regressions: it asserts the
 panel opens on the requested pane, the preload bridge exists, profiles are
@@ -33,6 +37,42 @@ ledger, `session.resolveProxy` reports Chromium genuinely routing through a
 SOCKS5 proxy while an invalid rule falls back to the system proxy rather than a
 direct connection, closing hides the window instead of destroying it, and the
 panel loads with no page errors or CSP violations.
+
+## The unified layout: what is shipped and what is blocked
+
+The `unified` layout is the merged, Telegram-style navigation: one column where
+Direct Messages and Servers are folders in the same list, a server reads like a
+DM until it is expanded, and custom folders sit below both.
+
+**Shipped:** the setting itself (`unified` default, `classic` fallback), the
+folder model with tones, ordering and remembered collapse state, folder entries
+validated to Discord channel paths, and navigation — clicking an entry moves the
+active profile to that chat. Entries store a *path*, not a URL, so one folder
+works on Stable, PTB and Canary alike.
+
+**Blocked:** automatically populating the list with *your* actual DMs and
+servers. Rendering the merged column is easy; knowing what belongs in it is not.
+There are only three ways to learn your guild and DM list, and each one costs
+something this project has refused to spend:
+
+1. **Ask the Discord API with your token.** That is the self-bot signature, and
+   the risk lands on the user's account. Rejected in `docs/RESEARCH.md`.
+2. **Read it out of Discord's page.** That means injecting JavaScript into the
+   origin holding your session token — the architecture rejected in
+   `docs/ARCHITECTURE.md`, and the thing that makes "we do not modify Discord"
+   true rather than a slogan.
+3. **Have the user curate it.** No enumeration, so no cost. This is what ships:
+   you add the chats you care about and get a merged, folder-grouped column over
+   them.
+
+Option 3 is genuinely useful and genuinely limited: it is a curated launcher,
+not a mirror of your whole account. Anyone claiming a no-injection client can
+auto-list your servers is either injecting or using the API.
+
+Deciding between "keep the guarantee" and "auto-populate the list" is a product
+decision with a security consequence, so it is not one to make quietly. If the
+injection path is ever taken it must be an explicit, off-by-default, clearly
+labelled mode — never the default, and never silent.
 
 ## Next
 

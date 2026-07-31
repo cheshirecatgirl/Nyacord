@@ -220,6 +220,55 @@ describe("privacy policy", () => {
   });
 });
 
+describe("appearance", () => {
+  test("the pane opens and titles itself", async () => {
+    await panel.click('.tab[data-pane="appearance"]');
+    await until(async () => (await panel.$eval("#pane-title", (el) => el.textContent)) === "Appearance");
+    assert.equal(await panel.$eval(".tab.active", (el) => el.textContent), "Appearance");
+  });
+
+  test("defaults to the unified layout and round-trips a change", async () => {
+    assert.equal((await state()).appearance.layout, "unified");
+
+    await panel.click(".layout-card:nth-child(2)");
+    await until(async () => (await state()).appearance.layout === "classic");
+
+    await panel.click(".layout-card:nth-child(1)");
+    await until(async () => (await state()).appearance.layout === "unified");
+  });
+
+  test("stores folders and normalizes entry targets", async () => {
+    const stored = await panel.evaluate(() =>
+      window.sable.setAppearance({
+        layout: "unified",
+        folders: [
+          {
+            id: "work",
+            name: "Work",
+            tone: "green",
+            collapsed: false,
+            entries: [
+              { id: "a", name: "Standup", target: "https://canary.discord.com/channels/1/2" },
+              { id: "b", name: "Elsewhere", target: "https://evil.example/channels/1/2" },
+            ],
+          },
+        ],
+      }),
+    );
+
+    assert.equal(stored.folders.length, 1);
+    // The off-platform entry is dropped, and the channel-specific URL is
+    // reduced to a path so the folder works on any release channel.
+    assert.equal(stored.folders[0]?.entries.length, 1);
+    assert.equal(stored.folders[0]?.entries[0]?.target, "/channels/1/2");
+  });
+
+  test("refuses to navigate to a target outside Discord", async () => {
+    assert.equal(await panel.evaluate(() => window.sable.openChat("https://evil.example/x")), false);
+    assert.equal(await panel.evaluate(() => window.sable.openChat("/not/a/channel")), false);
+  });
+});
+
 describe("request filtering", () => {
   test("blocks the analytics endpoint and records it", async () => {
     const error = await app

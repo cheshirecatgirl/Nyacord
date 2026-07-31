@@ -63,6 +63,15 @@ makes a profile the right granularity: route one identity over Tor or a VPN and
 leave another direct. Plus DNS-over-HTTPS, so your network operator does not get
 a plaintext list of every host you contact.
 
+**A layout that merges DMs and servers.** `Unified` (the default) puts Direct
+Messages and Servers in one column as folders, Telegram-style, so a server reads
+like a DM until you open it and switching between the two never moves you to a
+different navigation surface. `Classic` restores Discord's own arrangement. Add
+your own folders on top. Read
+[how far this goes](docs/ROADMAP.md#the-unified-layout-what-is-shipped-and-what-is-blocked)
+before expecting it to list your whole account — it is a curated launcher, not a
+mirror, and the reason why is a deliberate trade.
+
 **Portable like Telegram.** Put a `sable-data` directory next to the
 executable and Sable keeps everything there and touches nothing else.
 
@@ -105,8 +114,8 @@ Requires Node 20+.
 ```bash
 npm install
 npm start          # build and run
-npm test           # 63 unit tests over the pure policy/rule/network modules
-npm run test:e2e   # 16 end-to-end tests that launch the real app
+npm test           # 76 unit tests over the pure policy/rule/network modules
+npm run test:e2e   # 20 end-to-end tests that launch the real app
 npm run dist       # package for the current platform
 ```
 
@@ -138,6 +147,7 @@ location and tells you in **About** rather than silently failing to persist.
 | <kbd>Ctrl/Cmd</kbd>+<kbd>P</kbd> | Profiles |
 | <kbd>Ctrl/Cmd</kbd>+<kbd>,</kbd> | Privacy settings |
 | <kbd>Ctrl/Cmd</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd> | Network (proxy, DNS) |
+| <kbd>Ctrl/Cmd</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd> | Appearance (layout, folders) |
 | <kbd>Ctrl/Cmd</kbd>+<kbd>Shift</kbd>+<kbd>I</kbd> | Privacy Inspector |
 | <kbd>Ctrl/Cmd</kbd>+<kbd>R</kbd> | Reload the Discord view |
 | <kbd>Esc</kbd> | Close the panel |

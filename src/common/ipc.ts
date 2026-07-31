@@ -10,6 +10,7 @@
  * reach any of this.
  */
 
+import type { AppearanceConfig } from "./appearance";
 import type { ChannelId } from "./channels";
 import type { DnsConfig } from "./network";
 import type { PrivacyPolicy } from "./policy";
@@ -27,6 +28,8 @@ export const IPC = {
   clearProfileData: "sable:clear-profile-data",
   setProfileProxy: "sable:set-profile-proxy",
   setDns: "sable:set-dns",
+  setAppearance: "sable:set-appearance",
+  openChat: "sable:open-chat",
   getLedger: "sable:get-ledger",
   clearLedger: "sable:clear-ledger",
   closePanel: "sable:close-panel",
@@ -38,7 +41,13 @@ export const IPC = {
   showPane: "sable:show-pane",
 } as const;
 
-export type PaneId = "profiles" | "privacy" | "network" | "inspector" | "about";
+export type PaneId =
+  | "profiles"
+  | "privacy"
+  | "network"
+  | "appearance"
+  | "inspector"
+  | "about";
 
 export interface LedgerEntry {
   readonly at: number;
@@ -64,6 +73,7 @@ export interface AppState {
   readonly dataDir: string;
   readonly policy: PrivacyPolicy;
   readonly dns: DnsConfig;
+  readonly appearance: AppearanceConfig;
   readonly profiles: readonly ProfileSummary[];
   readonly activeProfileId: string | null;
   /** True when the build has an unsafe developer switch enabled. */

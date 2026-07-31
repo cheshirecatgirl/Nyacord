@@ -10,6 +10,16 @@
  * URLs that came off the network. They must be inert text, and they are.
  */
 
+import {
+  FOLDER_TONES,
+  MAX_FOLDERS,
+  isDirectMessageTarget,
+  normalizeChatTarget,
+  type AppearanceConfig,
+  type ChatFolder,
+  type FolderTone,
+  type LayoutMode,
+} from "../common/appearance";
 import { CHANNELS, CHANNEL_IDS } from "../common/channels";
 import type { AppState, LedgerSnapshot, PaneId } from "../common/ipc";
 import { describeProxy, proxyResolvesRemotely, type DnsConfig, type ProxyConfig } from "../common/network";
@@ -161,7 +171,9 @@ let state: AppState | null = null;
 
 function showPane(pane: PaneId): void {
   for (const el of document.querySelectorAll<HTMLElement>(".pane")) {
-    el.classList.toggle("hidden", el.dataset["pane"] !== pane);
+    const selected = el.dataset["pane"] === pane;
+    el.classList.toggle("hidden", !selected);
+    if (selected) $("#pane-title").textContent = el.dataset["title"] ?? "";
   }
   for (const el of document.querySelectorAll<HTMLElement>(".tab")) {
     const selected = el.dataset["pane"] === pane;
@@ -431,6 +443,302 @@ $("#dns-apply").addEventListener("click", () => {
   });
 });
 
+// --------------------------------------------------------------- appearance
+
+/** Small helper for the miniature layout previews. */
+function mock(className: string, ...children: Node[]): HTMLDivElement {
+  const el = document.createElement("div");
+  el.className = className;
+  el.append(...children);
+  return el;
+}
+
+function mockRow(avatar: string, extra = ""): HTMLDivElement {
+  return mock(`mock-row ${extra}`.trim(), mock(`mock-avatar ${avatar}`.trim()), mock("mock-line"));
+}
+
+function mockGroup(open: boolean): HTMLDivElement {
+  const caret = document.createElement("span");
+  caret.className = open ? "mock-caret open" : "mock-caret";
+  const line = mock("mock-line short bright");
+  return mock("mock-group", caret, line);
+}
+
+/**
+ * The unified list: one column, grouped, where a server row looks like a DM row
+ * until it is expanded.
+ */
+function unifiedMock(): HTMLDivElement {
+  return mock(
+    "mock",
+    mock(
+      "mock-list",
+      mockGroup(true),
+      mockRow("violet"),
+      mockRow("rose", "on"),
+      mockGroup(true),
+      mockRow("green square"),
+      mockRow("amber square"),
+      mockRow("cyan", "indent"),
+    ),
+    mock("mock-pane"),
+  );
+}
+
+/** Discord's own arrangement: an icon rail, then a separate list. */
+function classicMock(): HTMLDivElement {
+  return mock(
+    "mock",
+    mock(
+      "mock-rail",
+      mock("mock-avatar green square"),
+      mock("mock-avatar amber square"),
+      mock("mock-avatar cyan square"),
+    ),
+    mock("mock-list", mockGroup(true), mockRow("violet"), mockRow("rose", "on"), mockRow("cyan")),
+    mock("mock-pane"),
+  );
+}
+
+const LAYOUT_CARDS: {
+  mode: LayoutMode;
+  title: string;
+  tag: string;
+  desc: string;
+  preview: () => HTMLDivElement;
+}[] = [
+  {
+    mode: "unified",
+    title: "Unified",
+    tag: "Default",
+    desc:
+      "One merged list. Direct Messages and Servers are folders in the same column, so switching between them never moves you to a different navigation surface.",
+    preview: unifiedMock,
+  },
+  {
+    mode: "classic",
+    title: "Classic",
+    tag: "Discord",
+    desc:
+      "Discord's own arrangement: a server icon rail on the far left with a separate channel and DM column beside it.",
+    preview: classicMock,
+  },
+];
+
+function appearance(): AppearanceConfig {
+  return state?.appearance ?? { layout: "unified", folders: [] };
+}
+
+function saveAppearance(next: AppearanceConfig, status?: string): void {
+  void sable.setAppearance(next).then((stored) => {
+    if (state) state = { ...state, appearance: stored };
+    renderAppearance();
+    if (status) $("#folder-status").textContent = status;
+  });
+}
+
+function renderAppearance(): void {
+  const current = appearance();
+
+  const cards = $("#layouts");
+  cards.textContent = "";
+  for (const card of LAYOUT_CARDS) {
+    const el = document.createElement("button");
+    el.className = card.mode === current.layout ? "layout-card selected" : "layout-card";
+    el.setAttribute("aria-pressed", String(card.mode === current.layout));
+
+    const title = mock("title");
+    const label = document.createElement("span");
+    label.textContent = card.title;
+    const tag = document.createElement("span");
+    tag.className = "tag";
+    tag.textContent = card.tag;
+    title.append(label, tag);
+
+    const desc = mock("desc");
+    desc.textContent = card.desc;
+
+    el.append(card.preview(), title, desc);
+    el.addEventListener("click", () => saveAppearance({ ...current, layout: card.mode }));
+    cards.append(el);
+  }
+
+  $("#layout-note").textContent =
+    current.layout === "unified"
+      ? "Folders below appear in the unified list. Collapsed state is remembered per folder."
+      : "Folders are only shown by the unified layout. They stay saved while Classic is selected.";
+
+  renderFolders(current);
+}
+
+function renderFolders(current: AppearanceConfig): void {
+  const list = $("#folder-list");
+  list.textContent = "";
+
+  if (current.folders.length === 0) {
+    const empty = document.createElement("li");
+    empty.className = "empty";
+    empty.textContent = "No folders yet.";
+    list.append(empty);
+  }
+
+  current.folders.forEach((folder, index) => {
+    const li = document.createElement("li");
+    const head = mock("folder-head");
+
+    const tone = document.createElement("span");
+    tone.className = `tone ${folder.tone}`;
+    head.append(tone);
+
+    const grow = mock("grow");
+    const name = mock("name");
+    name.textContent = folder.name;
+    const sub = mock("sub");
+    sub.textContent = `${folder.entries.length} chat${folder.entries.length === 1 ? "" : "s"}`;
+    grow.append(name, sub);
+    head.append(grow);
+
+    head.append(
+      button("Tone", () => {
+        // Cycling beats a colour picker here: the palette is closed, so a
+        // click is faster than choosing from a menu of six.
+        const next = FOLDER_TONES[(FOLDER_TONES.indexOf(folder.tone) + 1) % FOLDER_TONES.length];
+        update(index, (draft) => {
+          draft.tone = next as FolderTone;
+        });
+      }),
+    );
+    head.append(
+      button("Rename", () => {
+        const value = window.prompt("Folder name", folder.name);
+        if (value) update(index, (draft) => void (draft.name = value));
+      }),
+    );
+    head.append(button("Add chat", () => addEntry(index)));
+    if (index > 0) head.append(button("↑", () => moveFolder(index, -1)));
+    if (index < current.folders.length - 1) head.append(button("↓", () => moveFolder(index, 1)));
+
+    const remove = button("Delete", () => {
+      if (window.confirm(`Delete the folder "${folder.name}"?`)) {
+        saveAppearance({
+          ...current,
+          folders: current.folders.filter((_, i) => i !== index),
+        });
+      }
+    });
+    remove.classList.add("danger");
+    head.append(remove);
+
+    li.append(head);
+
+    if (folder.entries.length > 0) {
+      const entries = document.createElement("ul");
+      entries.className = "folder-entries";
+      folder.entries.forEach((entry, entryIndex) => {
+        const row = document.createElement("li");
+
+        const kind = document.createElement("span");
+        kind.className = "kind";
+        kind.textContent = isDirectMessageTarget(entry.target) ? "DM" : "Server";
+        row.append(kind);
+
+        const grow2 = mock("grow");
+        const entryName = mock("name");
+        entryName.textContent = entry.name;
+        const target = mock("entry-target");
+        target.textContent = entry.target;
+        grow2.append(entryName, target);
+        row.append(grow2);
+
+        row.append(button("Open", () => void sable.openChat(entry.target)));
+        const drop = button("Remove", () =>
+          update(index, (draft) => {
+            draft.entries = draft.entries.filter((_, i) => i !== entryIndex);
+          }),
+        );
+        drop.classList.add("danger");
+        row.append(drop);
+
+        entries.append(row);
+      });
+      li.append(entries);
+    }
+
+    list.append(li);
+  });
+
+  function update(index: number, mutate: (folder: ChatFolder) => void): void {
+    const folders = current.folders.map((folder, i) =>
+      i === index ? { ...folder, entries: [...folder.entries] } : folder,
+    );
+    const target = folders[index];
+    if (!target) return;
+    mutate(target);
+    saveAppearance({ ...current, folders });
+  }
+
+  function moveFolder(index: number, delta: number): void {
+    const folders = [...current.folders];
+    const [moved] = folders.splice(index, 1);
+    if (moved) folders.splice(index + delta, 0, moved);
+    saveAppearance({ ...current, folders });
+  }
+
+  function addEntry(index: number): void {
+    const raw = window.prompt(
+      "Paste a Discord link or channel path\n(e.g. https://discord.com/channels/@me/123)",
+      "",
+    );
+    if (!raw) return;
+
+    // Validated here as well as in the main process, purely so the message can
+    // be specific instead of the entry silently vanishing on save.
+    const target = normalizeChatTarget(raw);
+    if (!target) {
+      $("#folder-status").textContent = "That is not a Discord channel link.";
+      return;
+    }
+
+    const name = window.prompt("Name for this chat", isDirectMessageTarget(target) ? "DM" : "Server");
+    if (!name) return;
+
+    update(index, (draft) => {
+      draft.entries = [
+        ...draft.entries,
+        { id: `e${Date.now().toString(36)}`, name, target },
+      ];
+    });
+    $("#folder-status").textContent = "";
+  }
+}
+
+$("#folder-add").addEventListener("click", () => {
+  const current = appearance();
+  if (current.folders.length >= MAX_FOLDERS) {
+    $("#folder-status").textContent = `Limit is ${MAX_FOLDERS} folders.`;
+    return;
+  }
+  const name = window.prompt("Folder name", "New folder");
+  if (!name) return;
+
+  saveAppearance(
+    {
+      ...current,
+      folders: [
+        ...current.folders,
+        {
+          id: `f${Date.now().toString(36)}`,
+          name,
+          tone: FOLDER_TONES[current.folders.length % FOLDER_TONES.length] ?? "violet",
+          collapsed: false,
+          entries: [],
+        },
+      ],
+    },
+    "",
+  );
+});
+
 // ---------------------------------------------------------------- inspector
 
 async function refreshLedger(): Promise<void> {
@@ -511,6 +819,7 @@ function render(next: AppState): void {
   renderProfiles();
   renderPrivacy();
   renderNetwork();
+  renderAppearance();
   renderAbout();
 }
 

@@ -215,6 +215,26 @@ export class AppShell {
     this.views.delete(id);
   }
 
+  /**
+   * Navigates the active profile to a channel path.
+   *
+   * This is how a folder entry actually opens a chat, and it needs nothing
+   * inside Discord's page: the web app is a normal SPA whose routes are URLs,
+   * so a folder is a set of destinations rather than a set of DOM handles. The
+   * path is resolved against the profile's own channel, so the same folder
+   * works on Stable, PTB and Canary.
+   */
+  openChat(path: string): boolean {
+    const profile = this.profiles.active();
+    if (!profile) return false;
+    const entry = this.views.get(profile.id);
+    if (!entry) return false;
+
+    void entry.view.webContents.loadURL(`${CHANNELS[profile.channel].origin}${path}`);
+    this.closePanel();
+    return true;
+  }
+
   reloadActive(): void {
     const id = this.profiles.activeId();
     if (id) this.views.get(id)?.watchdog.reload();
@@ -388,6 +408,7 @@ export class AppShell {
       ...this.info,
       policy: this.config.get().policy,
       dns: this.config.get().dns,
+      appearance: this.config.get().appearance,
       profiles: this.summaries(),
       activeProfileId: this.profiles.activeId(),
     };

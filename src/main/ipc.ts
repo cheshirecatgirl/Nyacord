@@ -2,6 +2,7 @@ import { ipcMain } from "electron";
 
 import { isChannelId } from "../common/channels";
 import { IPC, type CreateProfileRequest } from "../common/ipc";
+import { normalizeAppearance, normalizeChatTarget } from "../common/appearance";
 import { normalizeDns } from "../common/network";
 import { normalizePolicy, presetPolicy, type PresetName } from "../common/policy";
 import type { SableConfig } from "./config";
@@ -91,6 +92,23 @@ export function registerIpc(
     if (typeof id !== "string" || !profiles.find(id)) return false;
     await shell.clearProfileData(id);
     return true;
+  });
+
+  ipcMain.handle(IPC.setAppearance, (_event, appearance: unknown) => {
+    const next = normalizeAppearance(appearance);
+    config.update((draft) => {
+      draft.appearance = next;
+    });
+    shell.pushState();
+    // Returned normalized so the UI shows what was actually stored — an entry
+    // with an unusable target is dropped, and the user should see that.
+    return next;
+  });
+
+  ipcMain.handle(IPC.openChat, (_event, target: unknown) => {
+    const path = normalizeChatTarget(target);
+    if (!path) return false;
+    return shell.openChat(path);
   });
 
   ipcMain.handle(IPC.setProfileProxy, async (_event, id: unknown, proxy: unknown) => {
