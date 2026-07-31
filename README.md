@@ -58,6 +58,11 @@ rather than glossed over.
 with its category, method and full URL. The classifier is a single pure module
 covered by unit tests, so "we block telemetry" is a claim you can run.
 
+**Per-profile egress.** A proxy is a session-level setting in Chromium, which
+makes a profile the right granularity: route one identity over Tor or a VPN and
+leave another direct. Plus DNS-over-HTTPS, so your network operator does not get
+a plaintext list of every host you contact.
+
 **Portable like Telegram.** Put a `sable-data` directory next to the
 executable and Sable keeps everything there and touches nothing else.
 
@@ -83,6 +88,10 @@ tool. What reaches your machine is Electron and this repository.
 | WebRTC | default route only | default route only | no non-proxied UDP |
 | Permissions | ask / deny | ask / deny | ask everything |
 
+Proxy (per profile) and secure DNS are configured separately, in **Network** —
+they are network decisions that outlive a privacy preset, so changing preset
+never resets them.
+
 Details, side effects, and an honest list of what Sable **cannot** do are in
 [docs/PRIVACY.md](docs/PRIVACY.md). The short version of the limits: presence
 and online status travel inside the gateway WebSocket and are not filterable
@@ -96,7 +105,7 @@ Requires Node 20+.
 ```bash
 npm install
 npm start          # build and run
-npm test           # 41 unit tests over the pure policy/rule modules
+npm test           # 60 unit tests over the pure policy/rule/network modules
 npm run dist       # package for the current platform
 ```
 
@@ -124,6 +133,7 @@ location and tells you in **About** rather than silently failing to persist.
 | --- | --- |
 | <kbd>Ctrl/Cmd</kbd>+<kbd>P</kbd> | Profiles |
 | <kbd>Ctrl/Cmd</kbd>+<kbd>,</kbd> | Privacy settings |
+| <kbd>Ctrl/Cmd</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd> | Network (proxy, DNS) |
 | <kbd>Ctrl/Cmd</kbd>+<kbd>Shift</kbd>+<kbd>I</kbd> | Privacy Inspector |
 | <kbd>Ctrl/Cmd</kbd>+<kbd>R</kbd> | Reload the Discord view |
 | <kbd>Esc</kbd> | Close the panel |

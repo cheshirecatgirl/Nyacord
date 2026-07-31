@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  sable:
+    name: Sable — typecheck, test, package
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sable
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: sable/package-lock.json
+
+      # `npm ci` refuses to install if package.json and the lockfile disagree,
+      # which is the property we want in CI.
+      - run: npm ci
+        env:
+          # The Electron binary is only needed to run the app, not to typecheck
+          # or to run the unit tests, which are pure and Electron-free.
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+
+      - run: npm run typecheck
+
+      - run: npm test
+
+      # Guards the project's headline supply-chain property: nothing ships to a
+      # user's machine except Electron and this repository.
+      - name: Assert zero runtime dependencies
+        run: |
+          count=$(node -p "Object.keys(require('./package.json').dependencies || {}).length")
+          if [ "$count" -ne 0 ]; then
+            echo "::error::package.json declares $count runtime dependencies; expected 0"
+            exit 1
+          fi

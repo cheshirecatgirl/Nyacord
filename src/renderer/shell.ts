@@ -8,7 +8,14 @@
  * become markup.
  */
 (() => {
-  type PaneId = "profiles" | "privacy" | "inspector" | "about";
+  type PaneId = "profiles" | "privacy" | "network" | "inspector" | "about";
+
+  interface ProxyConfig {
+    mode: "system" | "direct" | "manual" | "pac";
+    rules: string;
+    pacUrl: string;
+    bypass: string;
+  }
 
   interface ProfileSummary {
     id: string;
@@ -17,6 +24,7 @@
     ephemeral: boolean;
     active: boolean;
     badge: number;
+    proxy: ProxyConfig;
   }
 
   interface GhostPolicy {
@@ -26,9 +34,15 @@
     suppressCallReports: boolean;
   }
 
+  interface DnsConfig {
+    mode: "off" | "automatic" | "secure";
+    servers: string[];
+  }
+
   interface Policy {
     preset: string;
     ghost: GhostPolicy;
+    dns: DnsConfig;
     [key: string]: unknown;
   }
 
@@ -73,6 +87,7 @@
     renameProfile(id: string, name: string): Promise<boolean>;
     deleteProfile(id: string): Promise<boolean>;
     clearProfileData(id: string): Promise<boolean>;
+    setProfileProxy(id: string, proxy: ProxyConfig): Promise<ProxyConfig | null>;
     getLedger(profileId?: string): Promise<LedgerSnapshot>;
     clearLedger(): Promise<boolean>;
     closePanel(): Promise<boolean>;
@@ -401,6 +416,85 @@
     }
   }
 
+  // ---------------------------------------------------------------- network
+
+  function activeProfile(): ProfileSummary | undefined {
+    return state?.profiles.find((p) => p.active);
+  }
+
+  function renderNetwork(): void {
+    if (!state) return;
+    const profile = activeProfile();
+    $("#proxy-profile").textContent = profile ? profile.name : "no profile";
+
+    const proxy = profile?.proxy ?? { mode: "system", rules: "", pacUrl: "", bypass: "" };
+    ($("#proxy-mode") as HTMLSelectElement).value = proxy.mode;
+    ($("#proxy-rules") as HTMLInputElement).value = proxy.rules;
+    ($("#proxy-pac") as HTMLInputElement).value = proxy.pacUrl;
+    ($("#proxy-bypass") as HTMLInputElement).value = proxy.bypass;
+    updateProxyFields();
+
+    const dns = state.policy.dns;
+    ($("#dns-mode") as HTMLSelectElement).value = dns.mode;
+    ($("#dns-servers") as HTMLInputElement).value = dns.servers.join(" ");
+  }
+
+  /** Only show the input the selected mode actually uses. */
+  function updateProxyFields(): void {
+    const mode = ($("#proxy-mode") as HTMLSelectElement).value;
+    $("#proxy-rules-row").style.display = mode === "manual" ? "" : "none";
+    $("#proxy-pac-row").style.display = mode === "pac" ? "" : "none";
+    $("#proxy-bypass-row").style.display = mode === "manual" || mode === "pac" ? "" : "none";
+  }
+
+  $("#proxy-mode").addEventListener("change", updateProxyFields);
+
+  $("#proxy-apply").addEventListener("click", () => {
+    const profile = activeProfile();
+    if (!profile) return;
+    const requested: ProxyConfig = {
+      mode: ($("#proxy-mode") as HTMLSelectElement).value as ProxyConfig["mode"],
+      rules: ($("#proxy-rules") as HTMLInputElement).value,
+      pacUrl: ($("#proxy-pac") as HTMLInputElement).value,
+      bypass: ($("#proxy-bypass") as HTMLInputElement).value,
+    };
+    const status = $("#proxy-status");
+    status.textContent = "Applying…";
+
+    void sable.setProfileProxy(profile.id, requested).then((stored) => {
+      if (!stored) {
+        status.textContent = "Failed to apply.";
+        return;
+      }
+      // The main process rejects malformed input by falling back to the system
+      // proxy. Say so plainly — silently ignoring a bad rule would leave the
+      // user believing they are proxied when they are not.
+      if (stored.mode !== requested.mode) {
+        status.textContent = `Rejected: that ${requested.mode} setting is not valid. Left on "${stored.mode}".`;
+      } else {
+        status.textContent = "Applied. Reloading the Discord view.";
+      }
+    });
+  });
+
+  $("#dns-apply").addEventListener("click", () => {
+    if (!state) return;
+    const servers = ($("#dns-servers") as HTMLInputElement).value
+      .split(/[\s,]+/)
+      .filter((s) => s.length > 0);
+    const mode = ($("#dns-mode") as HTMLSelectElement).value as DnsConfig["mode"];
+    const status = $("#dns-status");
+
+    void sable
+      .setPolicy({ ...state.policy, dns: { mode, servers } })
+      .then((policy) => {
+        status.textContent =
+          policy.dns.mode !== mode
+            ? 'Needs at least one valid https:// server for "secure"; left on automatic.'
+            : "Applied.";
+      });
+  });
+
   // -------------------------------------------------------------- inspector
 
   async function refreshLedger(): Promise<void> {
@@ -482,6 +576,7 @@
     state = next;
     renderProfiles();
     renderPrivacy();
+    renderNetwork();
     renderAbout();
   }
 

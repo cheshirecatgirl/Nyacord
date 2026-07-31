@@ -43,7 +43,26 @@ let tray: AppTray | null = null;
 
 app.on("second-instance", () => shell?.focus());
 
+/**
+ * Secure DNS is configured on the host resolver, which is process-wide — so
+ * like the Chromium switches it follows the global policy, not a profile.
+ * It must be set before the first resolution, hence immediately on ready.
+ */
+function configureDns(): void {
+  const { dns } = config.get().policy;
+  try {
+    app.configureHostResolver({
+      secureDnsMode: dns.mode,
+      secureDnsServers: dns.servers,
+    });
+  } catch (error) {
+    console.error("[sable] failed to configure secure DNS:", error);
+  }
+}
+
 app.whenReady().then(() => {
+  configureDns();
+
   const ledger = new PrivacyLedger();
   const profiles = new ProfileStore(config);
   const decision = pathDecision();
@@ -58,7 +77,7 @@ app.whenReady().then(() => {
     devMode,
   });
 
-  registerIpc(shell, config, profiles, ledger);
+  registerIpc(shell, config, profiles, ledger, configureDns);
   buildMenu(shell);
 
   tray = new AppTray(shell);

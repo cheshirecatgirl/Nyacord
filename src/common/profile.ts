@@ -1,4 +1,5 @@
 import type { ChannelId } from "./channels";
+import type { ProxyConfig } from "./network";
 import type { PrivacyPolicy } from "./policy";
 
 /**
@@ -20,6 +21,12 @@ export interface Profile {
   ephemeral: boolean;
   /** Optional per-profile override; when absent the global policy applies. */
   policy?: PrivacyPolicy;
+  /**
+   * Egress for this profile. Proxies are a session-level setting in Chromium,
+   * which makes a profile exactly the right granularity: one identity can go
+   * out over Tor or a VPN while another goes out directly.
+   */
+  proxy?: ProxyConfig;
   /** Injected as a user stylesheet. CSS only — never script. See docs/SECURITY.md. */
   userCss?: string;
   createdAt: number;
@@ -34,6 +41,7 @@ export interface ProfileSummary {
   readonly active: boolean;
   /** Unread count parsed from the document title; -1 when unknown. */
   readonly badge: number;
+  readonly proxy: ProxyConfig;
 }
 
 /**

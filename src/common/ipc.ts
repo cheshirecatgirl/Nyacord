@@ -24,6 +24,7 @@ export const IPC = {
   renameProfile: "sable:rename-profile",
   deleteProfile: "sable:delete-profile",
   clearProfileData: "sable:clear-profile-data",
+  setProfileProxy: "sable:set-profile-proxy",
   getLedger: "sable:get-ledger",
   clearLedger: "sable:clear-ledger",
   closePanel: "sable:close-panel",
@@ -35,7 +36,7 @@ export const IPC = {
   showPane: "sable:show-pane",
 } as const;
 
-export type PaneId = "profiles" | "privacy" | "inspector" | "about";
+export type PaneId = "profiles" | "privacy" | "network" | "inspector" | "about";
 
 export interface LedgerEntry {
   readonly at: number;

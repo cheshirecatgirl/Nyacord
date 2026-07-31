@@ -20,6 +20,7 @@
       <nav id="tabs">
         <button data-pane="profiles" class="tab active">Profiles</button>
         <button data-pane="privacy" class="tab">Privacy</button>
+        <button data-pane="network" class="tab">Network</button>
         <button data-pane="inspector" class="tab">Inspector</button>
         <button data-pane="about" class="tab">About</button>
         <span class="spacer"></span>
@@ -55,6 +56,55 @@
         <div id="presets" class="presets"></div>
         <p class="hint" id="preset-note"></p>
         <div id="toggles"></div>
+      </section>
+
+      <section class="pane hidden" data-pane="network">
+        <h3>Proxy — <span id="proxy-profile"></span></h3>
+        <p class="hint">
+          A proxy is a per-profile setting, so one identity can go out over Tor or
+          a VPN while another goes out directly.
+        </p>
+        <div class="row">
+          <select id="proxy-mode">
+            <option value="system">Use system proxy settings</option>
+            <option value="direct">Direct connection</option>
+            <option value="manual">Manual proxy</option>
+            <option value="pac">Auto-config (PAC) script</option>
+          </select>
+        </div>
+        <div class="row" id="proxy-rules-row">
+          <input id="proxy-rules" type="text" placeholder="socks5://127.0.0.1:9050" />
+        </div>
+        <div class="row" id="proxy-pac-row">
+          <input id="proxy-pac" type="text" placeholder="https://example.com/proxy.pac" />
+        </div>
+        <div class="row" id="proxy-bypass-row">
+          <input id="proxy-bypass" type="text" placeholder="Bypass list, e.g. &lt;local&gt;" />
+        </div>
+        <div class="row end">
+          <span id="proxy-status" class="sub grow"></span>
+          <button id="proxy-apply" class="primary">Apply &amp; reload</button>
+        </div>
+
+        <h3 style="margin-top: 24px">Secure DNS</h3>
+        <p class="hint">
+          Encrypts the lookups that reveal which hosts you contact to whoever runs
+          your network. This is a process-wide setting and applies to every profile.
+        </p>
+        <div class="row">
+          <select id="dns-mode">
+            <option value="off">Off — plain system DNS</option>
+            <option value="automatic">Automatic — upgrade when supported</option>
+            <option value="secure">Secure — DoH only</option>
+          </select>
+        </div>
+        <div class="row">
+          <input id="dns-servers" type="text" placeholder="https://dns.quad9.net/dns-query" />
+        </div>
+        <div class="row end">
+          <span id="dns-status" class="sub grow"></span>
+          <button id="dns-apply" class="primary">Apply</button>
+        </div>
       </section>
 
       <section class="pane hidden" data-pane="inspector">

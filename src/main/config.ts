@@ -1,5 +1,6 @@
 import { balancedPolicy, normalizePolicy, type PrivacyPolicy } from "../common/policy";
 import { isChannelId } from "../common/channels";
+import { normalizeProxy } from "../common/network";
 import type { Profile } from "../common/profile";
 import { configFile } from "./paths";
 import { JsonStore } from "./store";
@@ -44,6 +45,7 @@ function sanitize(config: SableConfig): SableConfig {
     ? config.profiles.filter(isPlausibleProfile).map((profile) => ({
         ...profile,
         policy: profile.policy ? normalizePolicy(profile.policy) : undefined,
+        proxy: normalizeProxy(profile.proxy),
       }))
     : [];
 

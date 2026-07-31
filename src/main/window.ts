@@ -9,8 +9,9 @@ import type { SableConfig } from "./config";
 import type { ProfileStore } from "./profiles";
 import type { PrivacyLedger } from "./privacy/ledger";
 import { ViewWatchdog } from "./reliability/watchdog";
+import { normalizeProxy, type ProxyConfig } from "../common/network";
 import { containNavigation, freezeNavigation } from "./security/navigation";
-import { configureSession } from "./security/session";
+import { applyProxy, configureSession } from "./security/session";
 import type { JsonStore } from "./store";
 
 /**
@@ -60,6 +61,7 @@ export class AppShell {
   private readonly window: BaseWindow;
   private readonly views = new Map<string, ProfileView>();
   private shell: WebContentsView | null = null;
+  private shellReady: Promise<void> = Promise.resolve();
   private panelOpen = false;
 
   constructor(
@@ -142,6 +144,7 @@ export class AppShell {
       getPolicy: policy,
       ledger: this.ledger,
       prompt: (permission, origin) => this.askPermission(permission, origin, profile),
+      proxy: this.profiles.proxyFor(profile.id),
     });
 
     const view = new WebContentsView({
@@ -213,6 +216,22 @@ export class AppShell {
     if (this.profiles.activeId() === id) this.showProfile(id);
   }
 
+  /**
+   * Applies a proxy to a live session and reloads the view, because a change
+   * of egress mid-session is exactly the moment the user wants every
+   * connection re-established rather than a mix of old and new.
+   */
+  async setProfileProxy(id: string, input: unknown): Promise<ProxyConfig> {
+    const proxy = this.profiles.setProxy(id, input);
+    const entry = this.views.get(id);
+    if (entry) {
+      await applyProxy(entry.view.webContents.session, proxy);
+      entry.watchdog.reload();
+    }
+    this.pushState();
+    return proxy;
+  }
+
   summaries(): ProfileSummary[] {
     const activeId = this.profiles.activeId();
     return this.profiles.all().map((profile) => ({
@@ -222,6 +241,7 @@ export class AppShell {
       ephemeral: profile.ephemeral,
       active: profile.id === activeId,
       badge: this.views.get(profile.id)?.badge ?? -1,
+      proxy: normalizeProxy(profile.proxy),
     }));
   }
 
@@ -246,8 +266,15 @@ export class AppShell {
       this.layout();
     }
     shell.webContents.focus();
-    this.pushState();
-    shell.webContents.send(IPC.showPane, pane);
+
+    // The very first open creates the view and starts loading it, so the
+    // renderer may not have registered its listeners yet. Sending immediately
+    // drops the message and the panel opens on the wrong pane.
+    void this.shellReady.then(() => {
+      if (shell.webContents.isDestroyed()) return;
+      this.pushState();
+      shell.webContents.send(IPC.showPane, pane);
+    });
   }
 
   closePanel(): void {
@@ -274,6 +301,10 @@ export class AppShell {
     // Transparent so the Discord view stays visible behind the panel.
     view.setBackgroundColor("#00000000");
     freezeNavigation(view.webContents);
+    this.shellReady = new Promise<void>((resolve) => {
+      view.webContents.once("did-finish-load", () => resolve());
+      view.webContents.once("did-fail-load", () => resolve());
+    });
     void view.webContents.loadFile(join(__dirname, "..", "renderer", "shell.html"));
     this.shell = view;
     return view;

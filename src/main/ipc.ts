@@ -20,6 +20,8 @@ export function registerIpc(
   config: JsonStore<SableConfig>,
   profiles: ProfileStore,
   ledger: PrivacyLedger,
+  /** Re-applies process-wide settings (secure DNS) that a policy change affects. */
+  onPolicyChanged: () => void,
 ): void {
   ipcMain.handle(IPC.getState, () => shell.state());
 
@@ -29,6 +31,7 @@ export function registerIpc(
     config.update((draft) => {
       draft.policy = next;
     });
+    onPolicyChanged();
     shell.pushState();
     return next;
   });
@@ -37,10 +40,13 @@ export function registerIpc(
     if (name !== "balanced" && name !== "strict" && name !== "paranoid") return null;
     const policy = presetPolicy(name as Exclude<PresetName, "custom">);
     config.update((draft) => {
-      draft.policy = policy;
+      // A preset must not silently reset the user's DNS choice: it is a
+      // network-level decision that outlives a privacy preset.
+      draft.policy = { ...policy, dns: draft.policy.dns };
     });
+    onPolicyChanged();
     shell.pushState();
-    return policy;
+    return config.get().policy;
   });
 
   ipcMain.handle(IPC.createProfile, (_event, request: unknown) => {
@@ -82,6 +88,14 @@ export function registerIpc(
     if (typeof id !== "string" || !profiles.find(id)) return false;
     await shell.clearProfileData(id);
     return true;
+  });
+
+  ipcMain.handle(IPC.setProfileProxy, async (_event, id: unknown, proxy: unknown) => {
+    if (typeof id !== "string" || !profiles.find(id)) return null;
+    // The normalized result is returned so the UI can show what was actually
+    // stored — an invalid rule degrades to the system proxy rather than being
+    // accepted and silently ignored.
+    return shell.setProfileProxy(id, proxy);
   });
 
   ipcMain.handle(IPC.getLedger, (_event, profileId: unknown) =>

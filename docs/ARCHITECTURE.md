@@ -66,6 +66,7 @@ cannot point a profile at an attacker-chosen partition.
 | `src/common/policy.ts` | The policy type, the three presets, and `normalizePolicy` |
 | `src/common/rules.ts` | The request classifier — the whole blocking behaviour |
 | `src/common/ua.ts` | User-agent and client-hint normalization |
+| `src/common/network.ts` | Proxy and secure-DNS configuration and validation |
 | `src/common/portable.ts` | Where state should live |
 | `src/common/ipc.ts` | The complete IPC surface, in one file |
 | `src/main/security/` | Session hardening, permissions, navigation containment |

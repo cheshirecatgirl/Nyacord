@@ -1,6 +1,7 @@
 import { session, shell, type Session } from "electron";
 
 import { CHANNELS, type ChannelDef, isDiscordOwnedHost } from "../../common/channels";
+import { proxyToElectron, type ProxyConfig } from "../../common/network";
 import type { PermissionKey, PrivacyPolicy } from "../../common/policy";
 import { classify } from "../../common/rules";
 import { clientHintHeaders, minimizedReferrer, sanitizeUserAgent } from "../../common/ua";
@@ -22,6 +23,7 @@ export interface SessionContext {
   readonly ledger: PrivacyLedger;
   /** Asks the user; resolves to the decision. Used when a permission is set to "ask". */
   readonly prompt: (permission: PermissionKey, origin: string) => Promise<boolean>;
+  readonly proxy: ProxyConfig;
 }
 
 /**
@@ -80,7 +82,25 @@ export function configureSession(partition: string, ctx: SessionContext): Sessio
   applyPermissions(ses, ctx);
   applyDevicePolicy(ses);
   ses.setSpellCheckerEnabled(ctx.getPolicy().spellcheck);
+  void applyProxy(ses, ctx.proxy);
   return ses;
+}
+
+/**
+ * Applied per session, which is what makes a proxy a per-profile setting.
+ *
+ * `forceReloadProxyConfig` matters on a change: without it Chromium may keep
+ * using resolved proxy state for connections it has already pooled, and the
+ * user would see a mixture of old and new egress with no indication why.
+ */
+export async function applyProxy(ses: Session, proxy: ProxyConfig): Promise<void> {
+  try {
+    await ses.setProxy(proxyToElectron(proxy));
+    await ses.forceReloadProxyConfig();
+    await ses.closeAllConnections();
+  } catch (error) {
+    console.error("[sable] failed to apply proxy:", error);
+  }
 }
 
 function applyUserAgent(ses: Session, ctx: SessionContext): void {

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { CHANNELS, type ChannelId } from "../common/channels";
+import { defaultProxy, normalizeProxy, type ProxyConfig } from "../common/network";
 import type { PrivacyPolicy } from "../common/policy";
 import { newProfileId, partitionFor, type Profile } from "../common/profile";
 import type { SableConfig } from "./config";
@@ -44,6 +45,7 @@ export class ProfileStore {
       name: input.name.trim().slice(0, 48) || CHANNELS[input.channel].label,
       channel: input.channel,
       ephemeral: input.ephemeral,
+      proxy: defaultProxy(),
       createdAt: now,
       lastUsedAt: now,
     };
@@ -86,6 +88,21 @@ export class ProfileStore {
    */
   policyFor(id: string): PrivacyPolicy {
     return this.find(id)?.policy ?? this.store.get().policy;
+  }
+
+  proxyFor(id: string): ProxyConfig {
+    return normalizeProxy(this.find(id)?.proxy);
+  }
+
+  /** Returns the normalized config that was actually stored, which may differ
+   * from what was requested if the input failed validation. */
+  setProxy(id: string, input: unknown): ProxyConfig {
+    const proxy = normalizeProxy(input);
+    this.store.update((draft) => {
+      const profile = draft.profiles.find((p) => p.id === id);
+      if (profile) profile.proxy = proxy;
+    });
+    return proxy;
   }
 
   partition(id: string): string {

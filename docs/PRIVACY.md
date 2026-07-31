@@ -78,6 +78,37 @@ fingerprint. We remove the token no browser would ever send and stop there.
 mDNS candidate obfuscation is explicitly enabled rather than left to Chromium's
 default, so a future upstream flip cannot silently change our posture.
 
+### Network egress
+
+| Setting | Scope | Effect |
+| --- | --- | --- |
+| Proxy | **Per profile** | System / direct / manual (`socks5://…`, `http://…`, per-scheme rules) / PAC script |
+| Secure DNS | Global | `off`, `automatic` (upgrade when your resolver supports DoH), or `secure` (DoH only) |
+
+A proxy is a session-level setting in Chromium, which makes a profile exactly
+the right granularity: one identity can leave over Tor while another leaves
+directly. SOCKS5 resolves hostnames *at the proxy*, so DNS does not leak
+locally; the HTTP proxy schemes do not.
+
+Two deliberate safety choices:
+
+- **An invalid proxy rule falls back to the system proxy, never to a direct
+  connection**, and the UI says the input was rejected. Chromium's own
+  behaviour on a malformed rule is to connect directly, which would leave you
+  believing you are proxied when you are not. That failure mode is worse than
+  an error, so bad input is rejected up front.
+- **PAC scripts must be `https:` or `file:`.** A PAC script is fetched and
+  executed by the browser; over plaintext HTTP, anyone on the path could
+  rewrite it and redirect every request you make.
+
+Sable does **not** pick a DoH provider for you. Silently routing every lookup
+to a resolver of our choosing would move your DNS from one third party to
+another without asking. `automatic` upgrades to DoH when your own resolver
+supports it; naming a server is opt-in. Choosing `secure` with no valid server
+falls back to `automatic` rather than leaving Chromium unable to resolve
+anything — a client that resolves nothing is not secure, it is broken, and a
+user facing a dead app turns the whole feature off.
+
 ### Permissions
 
 Default-deny. Camera, microphone, screen share, notifications and opening
@@ -113,10 +144,11 @@ Discord exactly as they would be in Firefox. If your threat model includes
 Discord itself, no client-side tool solves it — that is a question about
 whether to use the service at all.
 
-**Per-profile policy does not cover WebRTC.** Chromium command-line switches
-are process-wide and must be set before any profile is chosen, so WebRTC
-policy follows the *global* setting even when a profile overrides everything
-else.
+**Per-profile policy does not cover WebRTC or DNS.** Chromium command-line
+switches are process-wide and must be set before any profile is chosen, and the
+host resolver is likewise a single process-wide object. So WebRTC and secure
+DNS follow the *global* setting even when a profile overrides everything else.
+Proxies are genuinely per-profile, because Chromium attaches them to sessions.
 
 **Portability is not perfect.** Sable directs its own state — config, cookies,
 cache, logs — to the portable directory. Chromium may still use the OS
