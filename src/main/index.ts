@@ -6,7 +6,7 @@ import { buildMenu } from "./menu";
 import { initializePaths, pathDecision, dataRoot } from "./paths";
 import { PrivacyLedger } from "./privacy/ledger";
 import { ProfileStore } from "./profiles";
-import { applyChromiumSwitches, disableCrashUploads } from "./switches";
+import { applyChromiumSwitches } from "./switches";
 import { AppTray } from "./tray";
 import { AppShell } from "./window";
 
@@ -27,7 +27,6 @@ const devMode = process.argv.includes("--dev") && !app.isPackaged;
 initializePaths();
 const config = openConfig();
 applyChromiumSwitches(config.get().policy);
-disableCrashUploads();
 
 /**
  * The single-instance lock is keyed on the user-data directory, which means
@@ -49,7 +48,7 @@ app.on("second-instance", () => shell?.focus());
  * It must be set before the first resolution, hence immediately on ready.
  */
 function configureDns(): void {
-  const { dns } = config.get().policy;
+  const { dns } = config.get();
   try {
     app.configureHostResolver({
       secureDnsMode: dns.mode,
@@ -85,9 +84,9 @@ app.whenReady().then(() => {
 
   shell.start();
 
-  // Keep the tray label in step with unread counts without polling the views.
+  // Keep the tray label in step with unread counts. `refresh` is a no-op
+  // unless something actually changed, so this stays cheap.
   const refreshTray = setInterval(() => tray?.refresh(), 5_000);
-  app.on("before-quit", () => clearInterval(refreshTray));
 
   /**
    * Resuming from sleep and regaining connectivity are the two moments a
@@ -95,29 +94,35 @@ app.whenReady().then(() => {
    * the watchdogs rather than waiting for Discord's own retry.
    */
   powerMonitor.on("resume", () => shell?.onNetworkOnline());
-  if (typeof net.isOnline === "function") {
-    let wasOnline = net.isOnline();
-    setInterval(() => {
-      const online = net.isOnline();
-      if (online && !wasOnline) shell?.onNetworkOnline();
-      wasOnline = online;
-    }, 10_000).unref();
-  }
+
+  let wasOnline = net.isOnline();
+  const netPoll = setInterval(() => {
+    const online = net.isOnline();
+    if (online && !wasOnline) shell?.onNetworkOnline();
+    wasOnline = online;
+  }, 10_000);
+  netPoll.unref();
 
   app.on("activate", () => shell?.focus());
+
+  app.on("before-quit", () => {
+    clearInterval(refreshTray);
+    clearInterval(netPoll);
+    // Let the window actually close this time; it hides on close otherwise.
+    shell?.releaseForQuit();
+    config.flush();
+    tray?.destroy();
+  });
 });
 
 /**
- * Closing the last window does not quit: this is a messenger, and quitting
- * silently drops your notifications. Quit is explicit, via the menu or tray.
+ * Closing the window hides it rather than destroying it, so this only fires
+ * during a real quit. It stays as a safety net for the case where the tray
+ * icon failed to load: without a tray there is no way back to a hidden
+ * window, so on those platforms the app should genuinely exit.
  */
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin" && !tray) app.quit();
-});
-
-app.on("before-quit", () => {
-  config.flush();
-  tray?.destroy();
+  if (process.platform !== "darwin" && !tray?.isActive()) app.quit();
 });
 
 /**

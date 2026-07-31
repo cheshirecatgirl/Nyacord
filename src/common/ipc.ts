@@ -11,6 +11,7 @@
  */
 
 import type { ChannelId } from "./channels";
+import type { DnsConfig } from "./network";
 import type { PrivacyPolicy } from "./policy";
 import type { ProfileSummary } from "./profile";
 import type { RuleCategory } from "./rules";
@@ -25,6 +26,7 @@ export const IPC = {
   deleteProfile: "sable:delete-profile",
   clearProfileData: "sable:clear-profile-data",
   setProfileProxy: "sable:set-profile-proxy",
+  setDns: "sable:set-dns",
   getLedger: "sable:get-ledger",
   clearLedger: "sable:clear-ledger",
   closePanel: "sable:close-panel",
@@ -61,6 +63,7 @@ export interface AppState {
   readonly portableReason: string;
   readonly dataDir: string;
   readonly policy: PrivacyPolicy;
+  readonly dns: DnsConfig;
   readonly profiles: readonly ProfileSummary[];
   readonly activeProfileId: string | null;
   /** True when the build has an unsafe developer switch enabled. */

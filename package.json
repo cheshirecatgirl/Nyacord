@@ -12,7 +12,7 @@
   "scripts": {
     "clean": "node scripts/clean.mjs",
     "typecheck": "tsc --noEmit",
-    "build": "npm run clean && tsc -p tsconfig.json && node scripts/bundle-preload.mjs && node scripts/assets.mjs",
+    "build": "npm run clean && tsc -p tsconfig.json && node scripts/bundle.mjs && node scripts/assets.mjs",
     "start": "npm run build && electron .",
     "dev": "npm run build && electron . --dev",
     "test": "npm run build && node --test \"dist/test/*.test.js\"",

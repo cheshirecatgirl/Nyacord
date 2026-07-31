@@ -1,6 +1,6 @@
 import { balancedPolicy, normalizePolicy, type PrivacyPolicy } from "../common/policy";
 import { isChannelId } from "../common/channels";
-import { normalizeProxy } from "../common/network";
+import { defaultDns, normalizeDns, normalizeProxy, type DnsConfig } from "../common/network";
 import type { Profile } from "../common/profile";
 import { configFile } from "./paths";
 import { JsonStore } from "./store";
@@ -17,6 +17,13 @@ export interface SableConfig {
   /** Bumped when a migration is needed; unknown future versions fall back to defaults. */
   version: number;
   policy: PrivacyPolicy;
+  /**
+   * Secure DNS lives beside the privacy policy rather than inside it. The host
+   * resolver is process-wide, so unlike everything in `policy` it can never be
+   * overridden per profile — and keeping it separate means switching privacy
+   * preset does not silently reset a network decision the user made once.
+   */
+  dns: DnsConfig;
   profiles: Profile[];
   activeProfileId: string | null;
   window: WindowBounds;
@@ -28,6 +35,13 @@ export function defaultConfig(): SableConfig {
   return {
     version: CONFIG_VERSION,
     policy: balancedPolicy(),
+    /**
+     * Deliberately not a specific provider. Routing every lookup to a resolver
+     * we picked would move your DNS from one third party to another of our
+     * choosing, without asking. `automatic` upgrades to DoH when your own
+     * resolver supports it; naming a server is opt-in.
+     */
+    dns: defaultDns(),
     profiles: [],
     activeProfileId: null,
     window: { width: 1280, height: 800, maximized: false },
@@ -60,6 +74,7 @@ function sanitize(config: SableConfig): SableConfig {
   return {
     version: CONFIG_VERSION,
     policy: normalizePolicy(config.policy),
+    dns: normalizeDns(config.dns),
     profiles,
     activeProfileId,
     window: {

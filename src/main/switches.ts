@@ -58,15 +58,3 @@ export function applyChromiumSwitches(policy: PrivacyPolicy): void {
   // Chromium default flip does not silently change our posture.
   app.commandLine.appendSwitch("enable-features", "WebRtcHideLocalIpsWithMdns");
 }
-
-/**
- * Crash reporting is off at the Electron layer too. Electron will otherwise
- * happily start Crashpad even with Breakpad switches set.
- */
-export function disableCrashUploads(): void {
-  try {
-    app.setPath("crashDumps", app.getPath("crashDumps"));
-  } catch {
-    /* path may not exist yet; harmless */
-  }
-}

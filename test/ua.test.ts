@@ -8,7 +8,7 @@ import {
   minimizedReferrer,
   sanitizeUserAgent,
 } from "../src/common/ua";
-import { partitionFor } from "../src/common/profile";
+import { parseBadgeFromTitle, partitionFor } from "../src/common/profile";
 
 const ELECTRON_UA =
   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Sable/0.1.0 Chrome/138.0.7204.100 Electron/43.2.0 Safari/537.36";
@@ -71,6 +71,24 @@ describe("referrer minimization", () => {
       null,
       "channels are separate origins",
     );
+  });
+});
+
+describe("unread badge", () => {
+  test("reads the count Discord puts in the document title", () => {
+    assert.equal(parseBadgeFromTitle("(3) #general | My Server"), 3);
+    assert.equal(parseBadgeFromTitle("  (12) Discord  "), 12);
+  });
+
+  test("is zero when there is no count", () => {
+    assert.equal(parseBadgeFromTitle("Discord"), 0);
+    assert.equal(parseBadgeFromTitle(""), 0);
+    assert.equal(parseBadgeFromTitle("#general (3)"), 0, "only a leading count counts");
+  });
+
+  test("ignores a non-numeric parenthetical rather than producing NaN", () => {
+    assert.equal(parseBadgeFromTitle("(new) Discord"), 0);
+    assert.equal(parseBadgeFromTitle("(•) Discord"), 0);
   });
 });
 

@@ -13,8 +13,11 @@ export interface ChannelDef {
   readonly origin: string;
   /** Entry point. `/app` skips the marketing landing page. */
   readonly appUrl: string;
-  /** Used to tint the profile chrome so you always know which build you are in. */
-  readonly accent: string;
+  /**
+   * Each channel is tinted so you always know which build you are in. The
+   * colour itself is presentation and lives in the stylesheet, keyed on the
+   * channel id — the panel's Content-Security-Policy forbids inline styles.
+   */
   readonly description: string;
 }
 
@@ -25,7 +28,6 @@ export const CHANNELS: Readonly<Record<ChannelId, ChannelDef>> = {
     host: "discord.com",
     origin: "https://discord.com",
     appUrl: "https://discord.com/app",
-    accent: "#5865f2",
     description: "The production build. Fewest surprises.",
   },
   ptb: {
@@ -34,7 +36,6 @@ export const CHANNELS: Readonly<Record<ChannelId, ChannelDef>> = {
     host: "ptb.discord.com",
     origin: "https://ptb.discord.com",
     appUrl: "https://ptb.discord.com/app",
-    accent: "#3ba55d",
     description: "Public Test Build. Features that are close to shipping.",
   },
   canary: {
@@ -43,7 +44,6 @@ export const CHANNELS: Readonly<Record<ChannelId, ChannelDef>> = {
     host: "canary.discord.com",
     origin: "https://canary.discord.com",
     appUrl: "https://canary.discord.com/app",
-    accent: "#faa61a",
     description: "Bleeding edge, updated constantly, breaks often.",
   },
 };

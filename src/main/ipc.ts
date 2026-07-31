@@ -2,6 +2,7 @@ import { ipcMain } from "electron";
 
 import { isChannelId } from "../common/channels";
 import { IPC, type CreateProfileRequest } from "../common/ipc";
+import { normalizeDns } from "../common/network";
 import { normalizePolicy, presetPolicy, type PresetName } from "../common/policy";
 import type { SableConfig } from "./config";
 import type { ProfileStore } from "./profiles";
@@ -20,8 +21,8 @@ export function registerIpc(
   config: JsonStore<SableConfig>,
   profiles: ProfileStore,
   ledger: PrivacyLedger,
-  /** Re-applies process-wide settings (secure DNS) that a policy change affects. */
-  onPolicyChanged: () => void,
+  /** Re-applies the process-wide host resolver configuration. */
+  onDnsChanged: () => void,
 ): void {
   ipcMain.handle(IPC.getState, () => shell.state());
 
@@ -31,7 +32,6 @@ export function registerIpc(
     config.update((draft) => {
       draft.policy = next;
     });
-    onPolicyChanged();
     shell.pushState();
     return next;
   });
@@ -40,13 +40,20 @@ export function registerIpc(
     if (name !== "balanced" && name !== "strict" && name !== "paranoid") return null;
     const policy = presetPolicy(name as Exclude<PresetName, "custom">);
     config.update((draft) => {
-      // A preset must not silently reset the user's DNS choice: it is a
-      // network-level decision that outlives a privacy preset.
-      draft.policy = { ...policy, dns: draft.policy.dns };
+      draft.policy = policy;
     });
-    onPolicyChanged();
     shell.pushState();
-    return config.get().policy;
+    return policy;
+  });
+
+  ipcMain.handle(IPC.setDns, (_event, dns: unknown) => {
+    const next = normalizeDns(dns);
+    config.update((draft) => {
+      draft.dns = next;
+    });
+    onDnsChanged();
+    shell.pushState();
+    return next;
   });
 
   ipcMain.handle(IPC.createProfile, (_event, request: unknown) => {
@@ -74,13 +81,9 @@ export function registerIpc(
     return true;
   });
 
-  ipcMain.handle(IPC.deleteProfile, (_event, id: unknown) => {
-    if (typeof id !== "string") return false;
-    shell.closeProfileView(id);
-    profiles.remove(id);
-    const next = profiles.activeId();
-    if (next) shell.showProfile(next);
-    shell.pushState();
+  ipcMain.handle(IPC.deleteProfile, async (_event, id: unknown) => {
+    if (typeof id !== "string" || !profiles.find(id)) return false;
+    await shell.deleteProfile(id);
     return true;
   });
 

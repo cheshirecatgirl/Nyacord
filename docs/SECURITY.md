@@ -109,6 +109,11 @@ The renderer builds all DOM with `createElement` and `textContent`. There is no
 `innerHTML` in the codebase, which matters because the Privacy Inspector
 displays URLs that came off the network — they must be inert text, and they are.
 
+There are also no inline styles and no `style` attributes: `style-src 'self'`
+is enforced with no `'unsafe-inline'`, so all presentation — including the
+per-channel accent colours — lives in the stylesheet. The panel loads with zero
+CSP violations, which is the point of setting a policy you actually comply with.
+
 ## macOS entitlements
 
 `build/entitlements.mac.plist` requests the minimum: a JIT for V8, the two

@@ -69,6 +69,7 @@ cannot point a profile at an attacker-chosen partition.
 | `src/common/network.ts` | Proxy and secure-DNS configuration and validation |
 | `src/common/portable.ts` | Where state should live |
 | `src/common/ipc.ts` | The complete IPC surface, in one file |
+| `src/main/config.ts` | On-disk shape, re-validated on load. Holds the global DNS setting, which is not part of `policy` because the host resolver is process-wide and can never be per-profile |
 | `src/main/security/` | Session hardening, permissions, navigation containment |
 | `src/main/privacy/ledger.ts` | The Privacy Inspector's in-memory record |
 | `src/main/reliability/` | Crash, hang and network recovery |
@@ -126,12 +127,22 @@ would spin forever and inflate the Privacy Inspector's numbers.
 ## Build
 
 - TypeScript compiles `src` and `test` to `dist/`.
-- The preload is then **bundled** by esbuild. This is a correctness
-  requirement, not an optimization: a sandboxed preload's `require` can only
-  resolve `electron` and a few node builtins, so a relative import of the
-  shared IPC contract throws at load time and the bridge silently never
-  appears. Bundling lets the preload share one source of truth for channel
-  names while shipping as a single loadable file.
+- The preload and the renderer are then **bundled** by esbuild.
+
+  For the preload this is a correctness requirement, not an optimization: a
+  sandboxed preload's `require` can only resolve `electron` and a few node
+  builtins, so a relative import of the shared IPC contract throws at load time
+  and the bridge silently never appears.
+
+  For the renderer it is what removes duplication. Without a bundler the panel
+  has to be a plain global script, which means re-declaring every shared type
+  and re-typing every constant that already exists in `src/common`.
+
+  The two use different output formats, and the difference matters: the preload
+  is CommonJS, the renderer is an **IIFE**. A CommonJS bundle loaded as a
+  classic `<script>` puts its top-level `var` declarations on `window`, which
+  collides with the read-only `window.sable` that `contextBridge` installs and
+  throws before any UI renders.
 - Renderer HTML and CSS are copied.
 - `electron-builder` packages, and `build/afterPack.cjs` flips Electron fuses.
 

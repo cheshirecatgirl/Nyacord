@@ -1,6 +1,6 @@
 import { session, shell, type Session } from "electron";
 
-import { CHANNELS, type ChannelDef, isDiscordOwnedHost } from "../../common/channels";
+import type { ChannelDef } from "../../common/channels";
 import { proxyToElectron, type ProxyConfig } from "../../common/network";
 import type { PermissionKey, PrivacyPolicy } from "../../common/policy";
 import { classify } from "../../common/rules";
@@ -84,6 +84,21 @@ export function configureSession(partition: string, ctx: SessionContext): Sessio
   ses.setSpellCheckerEnabled(ctx.getPolicy().spellcheck);
   void applyProxy(ses, ctx.proxy);
   return ses;
+}
+
+/**
+ * Erases everything a session holds: cookies, storage, caches, and the HTTP
+ * auth cache that would otherwise re-authenticate silently.
+ *
+ * Resolved from the partition rather than from a live view, so it works for a
+ * profile that has never been opened — otherwise "sign out" on an unopened
+ * profile would appear to succeed while leaving the session intact.
+ */
+export async function wipeSessionData(partition: string): Promise<void> {
+  const ses = session.fromPartition(partition);
+  await ses.clearStorageData();
+  await ses.clearCache();
+  await ses.clearAuthCache();
 }
 
 /**
@@ -254,10 +269,3 @@ export function openExternalSafely(url: string): void {
   }
   void shell.openExternal(parsed.toString());
 }
-
-export function channelForHost(host: string): ChannelDef | null {
-  for (const def of Object.values(CHANNELS)) if (def.host === host) return def;
-  return null;
-}
-
-export { isDiscordOwnedHost };

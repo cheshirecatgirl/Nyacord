@@ -5,8 +5,6 @@
  * if you want to know what the client will actually do.
  */
 
-import { defaultDns, normalizeDns, type DnsConfig } from "./network";
-
 export type PermissionDecision = "allow" | "ask" | "deny";
 
 /**
@@ -89,12 +87,6 @@ export interface PrivacyPolicy {
 
   webrtc: WebRtcPolicy;
 
-  /**
-   * Secure DNS. Process-wide like `webrtc`, so it is a global setting even
-   * though a profile may override everything else.
-   */
-  dns: DnsConfig;
-
   /** Chromium's spellchecker downloads dictionaries from Google on first use. */
   spellcheck: boolean;
 
@@ -134,14 +126,6 @@ export function balancedPolicy(): PrivacyPolicy {
     minimizeReferrer: true,
     globalPrivacyControl: true,
     webrtc: "public_interface_only",
-    /**
-     * Deliberately not a specific provider. Routing every lookup to a resolver
-     * we picked would move your DNS from one third party to another of our
-     * choosing, without asking — which is the kind of unilateral trust
-     * decision this project exists to avoid. `automatic` upgrades to DoH when
-     * your own resolver supports it; naming a server is opt-in.
-     */
-    dns: defaultDns(),
     spellcheck: false,
     permissions: permissions(
       {
@@ -268,7 +252,6 @@ export function normalizePolicy(input: unknown): PrivacyPolicy {
       webrtc === "default" || webrtc === "public_interface_only" || webrtc === "disable_non_proxied_udp"
         ? webrtc
         : base.webrtc,
-    dns: normalizeDns(raw["dns"] ?? base.dns),
     spellcheck: bool("spellcheck", base.spellcheck),
     permissions: perms,
   };

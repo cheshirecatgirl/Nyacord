@@ -17,7 +17,7 @@
     <div id="backdrop"></div>
 
     <main id="panel" role="dialog" aria-label="Sable settings">
-      <nav id="tabs">
+      <nav id="tabs" role="tablist">
         <button data-pane="profiles" class="tab active">Profiles</button>
         <button data-pane="privacy" class="tab">Privacy</button>
         <button data-pane="network" class="tab">Network</button>
@@ -38,11 +38,8 @@
           <h3>New profile</h3>
           <div class="row">
             <input id="new-name" type="text" placeholder="Name" maxlength="48" />
-            <select id="new-channel">
-              <option value="stable">Stable</option>
-              <option value="ptb">PTB</option>
-              <option value="canary">Canary</option>
-            </select>
+            <!-- Options are generated from the channel table in src/common. -->
+            <select id="new-channel" aria-label="Release channel"></select>
           </div>
           <label class="check">
             <input id="new-ephemeral" type="checkbox" />
@@ -86,7 +83,7 @@
           <button id="proxy-apply" class="primary">Apply &amp; reload</button>
         </div>
 
-        <h3 style="margin-top: 24px">Secure DNS</h3>
+        <h3 class="spaced">Secure DNS</h3>
         <p class="hint">
           Encrypts the lookups that reveal which hosts you contact to whoever runs
           your network. This is a process-wide setting and applies to every profile.

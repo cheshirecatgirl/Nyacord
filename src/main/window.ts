@@ -4,14 +4,14 @@ import { join } from "node:path";
 import { CHANNELS } from "../common/channels";
 import { IPC, type AppState, type PaneId } from "../common/ipc";
 import type { PermissionKey } from "../common/policy";
-import type { Profile, ProfileSummary } from "../common/profile";
+import { parseBadgeFromTitle, type Profile, type ProfileSummary } from "../common/profile";
 import type { SableConfig } from "./config";
 import type { ProfileStore } from "./profiles";
 import type { PrivacyLedger } from "./privacy/ledger";
 import { ViewWatchdog } from "./reliability/watchdog";
 import { normalizeProxy, type ProxyConfig } from "../common/network";
 import { containNavigation, freezeNavigation } from "./security/navigation";
-import { applyProxy, configureSession } from "./security/session";
+import { applyProxy, configureSession, wipeSessionData } from "./security/session";
 import type { JsonStore } from "./store";
 
 /**
@@ -63,6 +63,7 @@ export class AppShell {
   private shell: WebContentsView | null = null;
   private shellReady: Promise<void> = Promise.resolve();
   private panelOpen = false;
+  private allowClose = false;
 
   constructor(
     private readonly config: JsonStore<SableConfig>,
@@ -88,9 +89,28 @@ export class AppShell {
     this.window.on("resize", () => this.layout());
     this.window.on("maximize", () => this.layout());
     this.window.on("unmaximize", () => this.layout());
-    this.window.on("close", () => this.persistBounds());
+    /**
+     * Close hides rather than destroys, the way every messenger behaves: the
+     * gateway connection stays up so notifications keep arriving, and there is
+     * still a window to re-show when the user clicks the tray or docks icon.
+     *
+     * Destroying it here was a bug on two counts — `activate` would try to
+     * focus a destroyed window, and with no tray there was no route back.
+     * Quitting is explicit, and `allowClose` is what makes it possible.
+     */
+    this.window.on("close", (event) => {
+      this.persistBounds();
+      if (this.allowClose) return;
+      event.preventDefault();
+      this.window.hide();
+    });
 
     this.ledger.onChange(() => this.pushLedger());
+  }
+
+  /** Lets the real quit through; see the `close` handler above. */
+  releaseForQuit(): void {
+    this.allowClose = true;
   }
 
   start(): void {
@@ -104,6 +124,7 @@ export class AppShell {
   }
 
   focus(): void {
+    if (this.window.isDestroyed()) return;
     if (this.window.isMinimized()) this.window.restore();
     this.window.show();
     this.window.focus();
@@ -170,7 +191,7 @@ export class AppShell {
     // Discord writes the unread count into the document title. Reading it is
     // free and needs no script injection.
     view.webContents.on("page-title-updated", (_event, title) => {
-      entry.badge = parseBadge(title);
+      entry.badge = parseBadgeFromTitle(title);
       this.pushState();
     });
 
@@ -205,15 +226,28 @@ export class AppShell {
 
   /** Wipes storage for a profile without deleting the profile itself. */
   async clearProfileData(id: string): Promise<void> {
-    const entry = this.views.get(id);
-    const ses = entry?.view.webContents.session;
+    if (!this.profiles.find(id)) return;
+    const partition = this.profiles.partition(id);
     this.closeProfileView(id);
-    if (ses) {
-      await ses.clearStorageData();
-      await ses.clearCache();
-      await ses.clearAuthCache();
-    }
+    await wipeSessionData(partition);
     if (this.profiles.activeId() === id) this.showProfile(id);
+  }
+
+  /**
+   * Deletes a profile *and* its stored session. The confirmation the user sees
+   * promises both, so both have to happen — removing the config entry alone
+   * would leave a logged-in session on disk under a partition nothing points
+   * at any more.
+   */
+  async deleteProfile(id: string): Promise<void> {
+    if (!this.profiles.find(id)) return;
+    const partition = this.profiles.partition(id);
+    this.closeProfileView(id);
+    await wipeSessionData(partition);
+    this.profiles.remove(id);
+    const next = this.profiles.activeId();
+    if (next) this.showProfile(next);
+    this.pushState();
   }
 
   /**
@@ -353,6 +387,7 @@ export class AppShell {
     return {
       ...this.info,
       policy: this.config.get().policy,
+      dns: this.config.get().dns,
       profiles: this.summaries(),
       activeProfileId: this.profiles.activeId(),
     };
@@ -410,12 +445,4 @@ function describe(permission: PermissionKey): string {
     default:
       return `the "${permission}" capability`;
   }
-}
-
-/** Discord titles look like `(3) #general | Server`. */
-export function parseBadge(title: string): number {
-  const match = /^\((\d+)\)/.exec(title.trim());
-  if (!match?.[1]) return 0;
-  const value = Number.parseInt(match[1], 10);
-  return Number.isFinite(value) ? value : 0;
 }

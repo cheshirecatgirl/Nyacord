@@ -20,7 +20,9 @@ Honest status. What exists, what does not, and what will never exist.
 - Reliability watchdog: crash, hang, load failure, sleep/resume, network return
 - Tray with per-profile unread counts
 - Electron fuses, hardened macOS entitlements, atomic config writes
-- 60 unit tests over the pure policy, rule and network modules
+- Close-to-tray: closing hides the window so the connection and notifications
+  survive, and quitting stays explicit
+- 63 unit tests over the pure policy, rule and network modules
 
 Verified end to end by launching the app under a virtual display: window and
 views come up, the panel opens on the requested pane, profiles are created
@@ -73,8 +75,9 @@ would contradict the entire point.
 **Window state per profile.** Zoom level and scroll position currently follow
 the window, not the profile.
 
-**Accessibility pass.** The panel needs proper focus trapping, `aria-selected`
-on the tab list, and a keyboard-navigable ledger.
+**Accessibility pass.** The tab list now carries `role="tablist"` and
+`aria-selected`. Still missing: focus trapping while the panel is open, arrow-key
+navigation between tabs, and a keyboard-navigable ledger.
 
 ## Out of scope, permanently
 

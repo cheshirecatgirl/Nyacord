@@ -105,7 +105,7 @@ Requires Node 20+.
 ```bash
 npm install
 npm start          # build and run
-npm test           # 60 unit tests over the pure policy/rule/network modules
+npm test           # 63 unit tests over the pure policy/rule/network modules
 npm run dist       # package for the current platform
 ```
 

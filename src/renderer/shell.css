@@ -113,6 +113,10 @@ h3 {
   color: var(--muted);
 }
 
+h3.spaced {
+  margin-top: 24px;
+}
+
 .hint {
   margin: 0 0 14px;
   color: var(--muted);
@@ -139,11 +143,29 @@ ul {
   border-color: var(--accent);
 }
 
+/*
+ * Channel tints. Keyed on the channel id rather than set from JavaScript,
+ * because the panel's CSP forbids inline styles — and presentation belongs
+ * here anyway.
+ */
 .dot {
   width: 9px;
   height: 9px;
   border-radius: 50%;
   flex: none;
+  background: #888;
+}
+
+.dot.stable {
+  background: #5865f2;
+}
+
+.dot.ptb {
+  background: #3ba55d;
+}
+
+.dot.canary {
+  background: #faa61a;
 }
 
 .grow {
@@ -181,6 +203,10 @@ ul {
 
 .row.end {
   justify-content: flex-end;
+}
+
+.row.hidden {
+  display: none;
 }
 
 input[type="text"],
@@ -232,6 +258,11 @@ input[type="text"] {
 
 .toggle:last-child {
   border-bottom: none;
+}
+
+/* A suppression whose master switch is off cannot do anything. */
+.toggle.inactive {
+  opacity: 0.5;
 }
 
 .toggle .grow strong {

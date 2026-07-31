@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 
 import { IPC, type AppState, type CreateProfileRequest, type LedgerSnapshot, type PaneId } from "../common/ipc";
-import type { ProxyConfig } from "../common/network";
+import type { DnsConfig, ProxyConfig } from "../common/network";
 import type { PrivacyPolicy } from "../common/policy";
 
 /**
@@ -37,6 +37,8 @@ const api = {
 
   setProfileProxy: (id: string, proxy: ProxyConfig): Promise<ProxyConfig | null> =>
     ipcRenderer.invoke(IPC.setProfileProxy, id, proxy),
+
+  setDns: (dns: DnsConfig): Promise<DnsConfig> => ipcRenderer.invoke(IPC.setDns, dns),
 
   getLedger: (profileId?: string): Promise<LedgerSnapshot> =>
     ipcRenderer.invoke(IPC.getLedger, profileId),

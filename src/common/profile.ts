@@ -56,3 +56,15 @@ export function partitionFor(profile: Pick<Profile, "id" | "ephemeral">): string
 export function newProfileId(random: () => string): string {
   return random().replace(/[^a-zA-Z0-9]/g, "").slice(0, 12) || "default";
 }
+
+/**
+ * Discord writes the unread count into the document title, as `(3) #general`.
+ * Reading it costs nothing and needs no script injection, which is why the
+ * badge works at all in a client that refuses to run code inside the page.
+ */
+export function parseBadgeFromTitle(title: string): number {
+  const match = /^\((\d+)\)/.exec(title.trim());
+  if (!match?.[1]) return 0;
+  const value = Number.parseInt(match[1], 10);
+  return Number.isFinite(value) ? value : 0;
+}

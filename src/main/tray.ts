@@ -11,6 +11,7 @@ import type { AppShell } from "./window";
  */
 export class AppTray {
   private tray: Tray | null = null;
+  private signature = "";
 
   constructor(private readonly shell: AppShell) {}
 
@@ -29,11 +30,25 @@ export class AppTray {
     this.refresh();
   }
 
+  /** True only when a tray icon actually exists to return the app from. */
+  isActive(): boolean {
+    return this.tray !== null;
+  }
+
   refresh(): void {
     if (!this.tray) return;
 
     const profiles = this.shell.summaries();
     const total = this.shell.totalBadge();
+
+    // Rebuilding a native menu on a timer causes visible flicker on Linux and
+    // is pure waste when nothing changed, so the menu is only rebuilt when the
+    // text it would render actually differs.
+    const signature = profiles
+      .map((p) => `${p.id}:${p.name}:${p.channel}:${p.badge}:${p.active ? 1 : 0}`)
+      .join("|");
+    if (signature === this.signature) return;
+    this.signature = signature;
 
     this.tray.setToolTip(total > 0 ? `Sable — ${total} unread` : "Sable");
 
@@ -56,7 +71,10 @@ export class AppTray {
         { label: "Profiles…", click: () => this.shell.openPanel("profiles") },
         { label: "Privacy…", click: () => this.shell.openPanel("privacy") },
         { type: "separator" },
-        { label: "Quit", click: () => app.exit(0) },
+        // `quit`, not `exit`: `exit` skips `before-quit`, which is where the
+        // config is flushed — quitting from the tray would silently discard
+        // any setting changed since the last debounced write.
+        { label: "Quit", click: () => app.quit() },
       ]),
     );
   }
