@@ -46,6 +46,14 @@ interface ProfileView {
   badge: number;
 }
 
+/**
+ * Painted behind a view until its page has content. Follows the OS theme, so
+ * a dark desktop does not get a white flash while Discord loads.
+ */
+function chromeBackground(): string {
+  return nativeTheme.shouldUseDarkColors ? "#111214" : "#ffffff";
+}
+
 /** Facts about the running build that never change once the app has started. */
 export interface RuntimeInfo {
   readonly version: string;
@@ -80,7 +88,7 @@ export class AppShell {
       minWidth: 480,
       minHeight: 360,
       title: "Nyacord",
-      backgroundColor: nativeTheme.shouldUseDarkColors ? "#111214" : "#ffffff",
+      backgroundColor: chromeBackground(),
       show: false,
     });
 
@@ -105,7 +113,19 @@ export class AppShell {
       this.window.hide();
     });
 
+    // The background was sampled once at construction, so switching the OS to
+    // dark mode left the window painting white behind every view until each
+    // page repainted.
+    nativeTheme.on("updated", () => this.applyTheme());
+
     this.ledger.onChange(() => this.pushLedger());
+  }
+
+  private applyTheme(): void {
+    if (this.window.isDestroyed()) return;
+    const background = chromeBackground();
+    this.window.setBackgroundColor(background);
+    for (const entry of this.views.values()) entry.view.setBackgroundColor(background);
   }
 
   /** Lets the real quit through; see the `close` handler above. */
@@ -179,7 +199,7 @@ export class AppShell {
       },
     });
 
-    view.setBackgroundColor(nativeTheme.shouldUseDarkColors ? "#111214" : "#ffffff");
+    view.setBackgroundColor(chromeBackground());
     containNavigation(view.webContents, channel);
 
     const watchdog = new ViewWatchdog(view, channel.appUrl, {
