@@ -75,6 +75,6 @@ const api = {
   },
 };
 
-export type SableApi = typeof api;
+export type NyacordApi = typeof api;
 
-contextBridge.exposeInMainWorld("sable", api);
+contextBridge.exposeInMainWorld("nyacord", api);

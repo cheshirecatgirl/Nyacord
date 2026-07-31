@@ -41,7 +41,7 @@ await Promise.all([
     outfile: out("renderer", "shell.js"),
     // IIFE, not CJS: the panel is loaded as a classic <script>, where a CJS
     // bundle's top-level `var` declarations become properties of `window`.
-    // That collides with the contextBridge-exposed `window.sable`, which is
+    // That collides with the contextBridge-exposed `window.nyacord`, which is
     // read-only, and throws before any UI renders.
     format: "iife",
     platform: "browser",

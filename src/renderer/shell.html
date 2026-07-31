@@ -11,15 +11,15 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none';"
     />
-    <title>Sable</title>
+    <title>Nyacord</title>
     <link rel="stylesheet" href="shell.css" />
   </head>
   <body>
     <div id="backdrop"></div>
 
-    <main id="panel" role="dialog" aria-label="Sable settings">
+    <main id="panel" role="dialog" aria-label="Nyacord settings">
       <nav id="sidebar" role="tablist" aria-orientation="vertical">
-        <div class="brand">Sable</div>
+        <div class="brand">Nyacord</div>
 
         <div class="nav-group">Account</div>
         <button data-pane="profiles" class="tab active">Profiles</button>
@@ -130,11 +130,18 @@
 
           <div id="layout-note" class="notice"></div>
 
+          <h3 class="spaced">Folder switcher</h3>
+          <p class="hint">
+            The strip that sits above the chat list. This is the real component —
+            pick a tab and the choice is remembered across restarts.
+          </p>
+          <div id="switcher" class="switcher" role="tablist" aria-label="Active folder"></div>
+
           <h3 class="spaced">Folders</h3>
           <p class="hint">
-            Extra groups in the unified list, below Direct Messages and Servers. Add a
-            chat by pasting its Discord link or channel path — clicking a row opens it
-            in the active profile.
+            Extra tabs in the switcher, after DMs and Servers. Add a chat by pasting
+            its Discord link or channel path — clicking a row opens it in the active
+            profile.
           </p>
           <ul id="folder-list"></ul>
           <div class="row end">
@@ -145,7 +152,7 @@
 
         <section class="pane hidden" data-pane="inspector" data-title="Inspector">
           <p class="hint">
-            Everything Sable has blocked since launch. This list lives in memory only
+            Everything Nyacord has blocked since launch. This list lives in memory only
             and is never written to disk.
           </p>
           <div id="totals" class="totals"></div>

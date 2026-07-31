@@ -12,8 +12,8 @@
 
 export type PortableReason =
   | "flag" // --portable was passed
-  | "env" // SABLE_PORTABLE=1
-  | "marker" // a `sable-data` directory exists beside the executable
+  | "env" // NYACORD_PORTABLE=1
+  | "marker" // a `nyacord-data` directory exists beside the executable
   | "explicit-path" // --data-dir=… was passed
   | "not-portable";
 
@@ -23,7 +23,7 @@ export interface PortableInputs {
   readonly env: Readonly<Record<string, string | undefined>>;
   /** Directory containing the executable (or the project root when unpackaged). */
   readonly execDir: string;
-  /** Does `<execDir>/sable-data` already exist? */
+  /** Does `<execDir>/nyacord-data` already exist? */
   readonly markerExists: boolean;
   /** Platform-appropriate join, injected so this module stays dependency-free. */
   readonly join: (...parts: string[]) => string;
@@ -32,11 +32,11 @@ export interface PortableInputs {
 export interface PortableDecision {
   readonly portable: boolean;
   readonly reason: PortableReason;
-  /** Absolute path Sable should use for all writable state, or null to keep OS defaults. */
+  /** Absolute path Nyacord should use for all writable state, or null to keep OS defaults. */
   readonly dataDir: string | null;
 }
 
-export const PORTABLE_DIR_NAME = "sable-data";
+export const PORTABLE_DIR_NAME = "nyacord-data";
 
 function readFlagValue(argv: readonly string[], name: string): string | null {
   const prefix = `--${name}=`;
@@ -68,7 +68,7 @@ export function decidePortable(inputs: PortableInputs): PortableDecision {
     return { portable: true, reason: "flag", dataDir: beside };
   }
 
-  const envValue = inputs.env["SABLE_PORTABLE"];
+  const envValue = inputs.env["NYACORD_PORTABLE"];
   if (envValue === "1" || envValue === "true") {
     return { portable: true, reason: "env", dataDir: beside };
   }

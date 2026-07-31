@@ -6,7 +6,7 @@ import { decidePortable, PORTABLE_DIR_NAME } from "../src/common/portable";
 
 const base = {
   env: {} as Record<string, string | undefined>,
-  execDir: "/opt/sable",
+  execDir: "/opt/nyacord",
   markerExists: false,
   join: posix.join,
 };
@@ -22,7 +22,7 @@ describe("portable detection", () => {
     const decision = decidePortable({ ...base, argv: [], markerExists: true });
     assert.equal(decision.portable, true);
     assert.equal(decision.reason, "marker");
-    assert.equal(decision.dataDir, `/opt/sable/${PORTABLE_DIR_NAME}`);
+    assert.equal(decision.dataDir, `/opt/nyacord/${PORTABLE_DIR_NAME}`);
   });
 
   test("--portable forces it without a marker", () => {
@@ -33,12 +33,12 @@ describe("portable detection", () => {
 
   test("the environment variable works for launcher scripts", () => {
     for (const value of ["1", "true"]) {
-      const decision = decidePortable({ ...base, argv: [], env: { SABLE_PORTABLE: value } });
+      const decision = decidePortable({ ...base, argv: [], env: { NYACORD_PORTABLE: value } });
       assert.equal(decision.portable, true, value);
       assert.equal(decision.reason, "env");
     }
     assert.equal(
-      decidePortable({ ...base, argv: [], env: { SABLE_PORTABLE: "0" } }).portable,
+      decidePortable({ ...base, argv: [], env: { NYACORD_PORTABLE: "0" } }).portable,
       false,
     );
   });
@@ -46,10 +46,10 @@ describe("portable detection", () => {
   test("--data-dir wins over everything and takes both forms", () => {
     const equals = decidePortable({
       ...base,
-      argv: ["--portable", "--data-dir=/mnt/stick/sable"],
+      argv: ["--portable", "--data-dir=/mnt/stick/nyacord"],
       markerExists: true,
     });
-    assert.equal(equals.dataDir, "/mnt/stick/sable");
+    assert.equal(equals.dataDir, "/mnt/stick/nyacord");
     assert.equal(equals.reason, "explicit-path");
 
     const spaced = decidePortable({ ...base, argv: ["--data-dir", "/mnt/other"] });
@@ -59,6 +59,6 @@ describe("portable detection", () => {
   test("--data-dir followed by another flag is not treated as a value", () => {
     const decision = decidePortable({ ...base, argv: ["--data-dir", "--portable"] });
     assert.equal(decision.reason, "flag");
-    assert.equal(decision.dataDir, `/opt/sable/${PORTABLE_DIR_NAME}`);
+    assert.equal(decision.dataDir, `/opt/nyacord/${PORTABLE_DIR_NAME}`);
   });
 });

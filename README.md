@@ -2,7 +2,7 @@
 
 <img src="assets/icon.png" width="96" alt="">
 
-# Sable
+# Nyacord
 
 **A hardened, portable, multi-channel desktop client for Discord.**
 
@@ -12,7 +12,7 @@ Stable, PTB and Canary · real session isolation · privacy you can audit
 
 ---
 
-Sable is a purpose-built browser that loads Discord's own web application and
+Nyacord is a purpose-built browser that loads Discord's own web application and
 enforces privacy and security policy from **outside** the page, where the page
 cannot see or subvert it.
 
@@ -31,7 +31,7 @@ the official client (which runs arbitrary third-party JavaScript inside the
 origin holding your session token). Both are reasonable engineering; neither is
 a good foundation for a client whose headline claim is privacy.
 
-Sable takes the third path — the hardened shell — and pushes it further than a
+Nyacord takes the third path — the hardened shell — and pushes it further than a
 wrapper usually goes: genuine per-profile session isolation, Telegram-style
 portability, a policy engine you can unit-test, and a live inspector that shows
 you what was blocked instead of asking you to trust a feature list.
@@ -63,17 +63,19 @@ makes a profile the right granularity: route one identity over Tor or a VPN and
 leave another direct. Plus DNS-over-HTTPS, so your network operator does not get
 a plaintext list of every host you contact.
 
-**A layout that merges DMs and servers.** `Unified` (the default) puts Direct
-Messages and Servers in one column as folders, Telegram-style, so a server reads
-like a DM until you open it and switching between the two never moves you to a
-different navigation surface. `Classic` restores Discord's own arrangement. Add
-your own folders on top. Read
+**A layout that merges DMs and servers.** `Unified` (the default) puts a small
+folder switcher above one chat list, Telegram-style: DMs, Servers and your own
+folders are tabs in the same strip, a server row reads like a DM row until you
+open it, and the active tab is remembered across restarts. One list at a time,
+so the column stays short and you always know where you are. `Classic` restores
+Discord's own arrangement. This is a rearrangement of our own window — no
+injected script, no patched client. Read
 [how far this goes](docs/ROADMAP.md#the-unified-layout-what-is-shipped-and-what-is-blocked)
 before expecting it to list your whole account — it is a curated launcher, not a
 mirror, and the reason why is a deliberate trade.
 
-**Portable like Telegram.** Put a `sable-data` directory next to the
-executable and Sable keeps everything there and touches nothing else.
+**Portable like Telegram.** Put a `nyacord-data` directory next to the
+executable and Nyacord keeps everything there and touches nothing else.
 
 **Zero runtime dependencies.** Every package in `node_modules` is a build-time
 tool. What reaches your machine is Electron and this repository.
@@ -101,7 +103,7 @@ Proxy (per profile) and secure DNS are configured separately, in **Network** —
 they are network decisions that outlive a privacy preset, so changing preset
 never resets them.
 
-Details, side effects, and an honest list of what Sable **cannot** do are in
+Details, side effects, and an honest list of what Nyacord **cannot** do are in
 [docs/PRIVACY.md](docs/PRIVACY.md). The short version of the limits: presence
 and online status travel inside the gateway WebSocket and are not filterable
 without injecting code into the page, which this project deliberately refuses
@@ -114,7 +116,7 @@ Requires Node 20+.
 ```bash
 npm install
 npm start          # build and run
-npm test           # 76 unit tests over the pure policy/rule/network modules
+npm test           # 82 unit tests over the pure policy/rule/network modules
 npm run test:e2e   # 20 end-to-end tests that launch the real app
 npm run dist       # package for the current platform
 ```
@@ -127,17 +129,17 @@ run as root). On a headless machine, prefix it with `xvfb-run -a`.
 Any one of these puts all state in a directory beside the executable:
 
 ```bash
-mkdir sable-data          # a marker directory is enough
-./sable --portable
-SABLE_PORTABLE=1 ./sable
-./sable --data-dir=/mnt/usb/sable
+mkdir nyacord-data          # a marker directory is enough
+./nyacord --portable
+NYACORD_PORTABLE=1 ./nyacord
+./nyacord --data-dir=/mnt/usb/nyacord
 ```
 
 The single-instance lock is keyed on the data directory, so two portable copies
 in two folders run side by side while a second launch of the same copy just
 focuses the window you already have.
 
-If the portable directory turns out to be read-only, Sable falls back to the OS
+If the portable directory turns out to be read-only, Nyacord falls back to the OS
 location and tells you in **About** rather than silently failing to persist.
 
 ### Shortcuts
@@ -165,7 +167,7 @@ location and tells you in **About** rather than silently failing to persist.
 ## A word on Discord's Terms
 
 Discord's terms prohibit modifying the client, and Discord discourages
-third-party clients generally. Sable loads Discord's unmodified web app, injects
+third-party clients generally. Nyacord loads Discord's unmodified web app, injects
 nothing into it, and reimplements no API — it blocks some of its own outbound
 requests, the same category of action as running an ad blocker in Firefox.
 
@@ -177,7 +179,7 @@ reasoning.
 
 ## Not affiliated with Discord
 
-Sable is an independent project. Discord is a trademark of Discord Inc., which
+Nyacord is an independent project. Discord is a trademark of Discord Inc., which
 has no involvement in this software.
 
 ## License

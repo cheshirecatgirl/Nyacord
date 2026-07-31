@@ -18,7 +18,7 @@ export interface WindowBounds {
   maximized: boolean;
 }
 
-export interface SableConfig {
+export interface NyacordConfig {
   /** Bumped when a migration is needed; unknown future versions fall back to defaults. */
   version: number;
   policy: PrivacyPolicy;
@@ -37,7 +37,7 @@ export interface SableConfig {
 
 export const CONFIG_VERSION = 1;
 
-export function defaultConfig(): SableConfig {
+export function defaultConfig(): NyacordConfig {
   return {
     version: CONFIG_VERSION,
     policy: balancedPolicy(),
@@ -60,7 +60,7 @@ export function defaultConfig(): SableConfig {
  * older build, or restored from a different machine. Everything is re-validated
  * rather than cast.
  */
-function sanitize(config: SableConfig): SableConfig {
+function sanitize(config: NyacordConfig): NyacordConfig {
   const base = defaultConfig();
   const profiles = Array.isArray(config.profiles)
     ? config.profiles.filter(isPlausibleProfile).map((profile) => ({
@@ -111,8 +111,8 @@ function isPlausibleProfile(value: unknown): value is Profile {
   );
 }
 
-export function openConfig(): JsonStore<SableConfig> {
-  const store = new JsonStore<SableConfig>(configFile(), defaultConfig);
-  store.replace(sanitize(store.get() as SableConfig));
+export function openConfig(): JsonStore<NyacordConfig> {
+  const store = new JsonStore<NyacordConfig>(configFile(), defaultConfig);
+  store.replace(sanitize(store.get() as NyacordConfig));
   return store;
 }

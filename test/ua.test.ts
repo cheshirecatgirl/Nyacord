@@ -11,13 +11,13 @@ import {
 import { parseBadgeFromTitle, partitionFor } from "../src/common/profile";
 
 const ELECTRON_UA =
-  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Sable/0.1.0 Chrome/138.0.7204.100 Electron/43.2.0 Safari/537.36";
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Nyacord/0.1.0 Chrome/138.0.7204.100 Electron/43.2.0 Safari/537.36";
 
 describe("user agent", () => {
   test("removes every token that identifies the shell", () => {
     const sanitized = sanitizeUserAgent(ELECTRON_UA);
     assert.equal(sanitized.includes("Electron"), false);
-    assert.equal(sanitized.includes("Sable"), false);
+    assert.equal(sanitized.includes("Nyacord"), false);
     assert.equal(sanitized.includes("Chrome/138.0.7204.100"), true);
     assert.equal(sanitized.includes("  "), false, "no double spaces left behind");
   });
@@ -94,12 +94,12 @@ describe("unread badge", () => {
 
 describe("session partitions", () => {
   test("persistent profiles persist and ephemeral ones do not", () => {
-    assert.equal(partitionFor({ id: "abc123", ephemeral: false }), "persist:sable-abc123");
-    assert.equal(partitionFor({ id: "abc123", ephemeral: true }), "sable-eph-abc123");
+    assert.equal(partitionFor({ id: "abc123", ephemeral: false }), "persist:nyacord-abc123");
+    assert.equal(partitionFor({ id: "abc123", ephemeral: true }), "nyacord-eph-abc123");
   });
 
   test("a hand-edited id cannot escape the namespace", () => {
-    assert.equal(partitionFor({ id: "../../etc", ephemeral: false }), "persist:sable-etc");
-    assert.equal(partitionFor({ id: "persist:evil", ephemeral: true }), "sable-eph-persistevil");
+    assert.equal(partitionFor({ id: "../../etc", ephemeral: false }), "persist:nyacord-etc");
+    assert.equal(partitionFor({ id: "persist:evil", ephemeral: true }), "nyacord-eph-persistevil");
   });
 });

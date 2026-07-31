@@ -13,6 +13,7 @@
 import {
   FOLDER_TONES,
   MAX_FOLDERS,
+  folderTabs,
   isDirectMessageTarget,
   normalizeChatTarget,
   type AppearanceConfig,
@@ -26,9 +27,9 @@ import { describeProxy, proxyResolvesRemotely, type DnsConfig, type ProxyConfig 
 import type { GhostPolicy, PrivacyPolicy } from "../common/policy";
 import type { ProfileSummary } from "../common/profile";
 import { RULE_CATEGORY_LABELS } from "../common/rules";
-import type { SableApi } from "../preload/shell";
+import type { NyacordApi } from "../preload/shell";
 
-const sable = (window as unknown as { sable: SableApi }).sable;
+const nyacord = (window as unknown as { nyacord: NyacordApi }).nyacord;
 
 /** The policy fields that are a plain on/off switch. */
 type BooleanPolicyKey = {
@@ -188,10 +189,10 @@ for (const tab of document.querySelectorAll<HTMLElement>(".tab")) {
   tab.addEventListener("click", () => showPane(tab.dataset["pane"] as PaneId));
 }
 
-$("#close").addEventListener("click", () => void sable.closePanel());
-$("#backdrop").addEventListener("click", () => void sable.closePanel());
+$("#close").addEventListener("click", () => void nyacord.closePanel());
+$("#backdrop").addEventListener("click", () => void nyacord.closePanel());
 window.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") void sable.closePanel();
+  if (event.key === "Escape") void nyacord.closePanel();
 });
 
 // ----------------------------------------------------------------- profiles
@@ -239,18 +240,18 @@ function renderProfiles(): void {
       li.append(badge);
     }
 
-    if (!profile.active) li.append(button("Open", () => void sable.switchProfile(profile.id)));
+    if (!profile.active) li.append(button("Open", () => void nyacord.switchProfile(profile.id)));
 
     li.append(
       button("Rename", () => {
         const next = window.prompt("New name", profile.name);
-        if (next) void sable.renameProfile(profile.id, next);
+        if (next) void nyacord.renameProfile(profile.id, next);
       }),
     );
     li.append(
       button("Sign out", () => {
         if (window.confirm(`Clear all stored data for "${profile.name}"?`)) {
-          void sable.clearProfileData(profile.id);
+          void nyacord.clearProfileData(profile.id);
         }
       }),
     );
@@ -258,7 +259,7 @@ function renderProfiles(): void {
     if (state.profiles.length > 1) {
       const remove = button("Delete", () => {
         if (window.confirm(`Delete the profile "${profile.name}" and its data?`)) {
-          void sable.deleteProfile(profile.id);
+          void nyacord.deleteProfile(profile.id);
         }
       });
       remove.classList.add("danger");
@@ -286,7 +287,7 @@ $("#new-profile").addEventListener("submit", (event) => {
   const name = ($("#new-name") as HTMLInputElement).value;
   const channel = ($("#new-channel") as HTMLSelectElement).value as ProfileSummary["channel"];
   const ephemeral = ($("#new-ephemeral") as HTMLInputElement).checked;
-  void sable.createProfile({ name, channel, ephemeral }).then(() => {
+  void nyacord.createProfile({ name, channel, ephemeral }).then(() => {
     ($("#new-name") as HTMLInputElement).value = "";
     ($("#new-ephemeral") as HTMLInputElement).checked = false;
   });
@@ -301,7 +302,7 @@ function renderPrivacy(): void {
   const presets = $("#presets");
   presets.textContent = "";
   for (const name of PRESETS) {
-    const el = button(name[0]!.toUpperCase() + name.slice(1), () => void sable.applyPreset(name));
+    const el = button(name[0]!.toUpperCase() + name.slice(1), () => void nyacord.applyPreset(name));
     if (policy.preset === name) el.classList.add("active");
     presets.append(el);
   }
@@ -343,7 +344,7 @@ function renderPrivacy(): void {
       const next: PrivacyPolicy = { ...policy, ghost: { ...policy.ghost } };
       if (toggle.scope === "ghost") next.ghost[toggle.key] = input.checked;
       else next[toggle.key] = input.checked;
-      void sable.setPolicy(next);
+      void nyacord.setPolicy(next);
     });
 
     const grow = document.createElement("div");
@@ -410,7 +411,7 @@ $("#proxy-apply").addEventListener("click", () => {
   const status = $("#proxy-status");
   status.textContent = "Applying…";
 
-  void sable.setProfileProxy(profile.id, requested).then((stored) => {
+  void nyacord.setProfileProxy(profile.id, requested).then((stored) => {
     if (!stored) {
       status.textContent = "Failed to apply.";
       return;
@@ -435,7 +436,7 @@ $("#dns-apply").addEventListener("click", () => {
     .filter((s) => s.length > 0);
   const status = $("#dns-status");
 
-  void sable.setDns({ mode, servers }).then((dns) => {
+  void nyacord.setDns({ mode, servers }).then((dns) => {
     status.textContent =
       dns.mode !== mode
         ? 'Needs at least one valid https:// server for "secure"; left on automatic.'
@@ -457,29 +458,37 @@ function mockRow(avatar: string, extra = ""): HTMLDivElement {
   return mock(`mock-row ${extra}`.trim(), mock(`mock-avatar ${avatar}`.trim()), mock("mock-line"));
 }
 
-function mockGroup(open: boolean): HTMLDivElement {
+function mockGroup(): HTMLDivElement {
   const caret = document.createElement("span");
-  caret.className = open ? "mock-caret open" : "mock-caret";
-  const line = mock("mock-line short bright");
-  return mock("mock-group", caret, line);
+  caret.className = "mock-caret";
+  return mock("mock-group", caret, mock("mock-line short bright"));
+}
+
+function mockTab(active: boolean, width: "sm" | "md" | "lg"): HTMLDivElement {
+  return mock(`mock-tab ${width}${active ? " on" : ""}`);
 }
 
 /**
- * The unified list: one column, grouped, where a server row looks like a DM row
- * until it is expanded.
+ * The unified column: a folder switcher along the top, one list below it.
+ *
+ * Only the active folder is shown, which is what keeps the column short — the
+ * alternative, both groups stacked in one scroll, is two lists sharing a
+ * container rather than a merged navigation surface.
  */
 function unifiedMock(): HTMLDivElement {
   return mock(
     "mock",
     mock(
-      "mock-list",
-      mockGroup(true),
-      mockRow("violet"),
-      mockRow("rose", "on"),
-      mockGroup(true),
-      mockRow("green square"),
-      mockRow("amber square"),
-      mockRow("cyan", "indent"),
+      "mock-col",
+      mock("mock-switcher", mockTab(true, "sm"), mockTab(false, "md"), mockTab(false, "sm"), mockTab(false, "md")),
+      mock(
+        "mock-list",
+        mockRow("violet"),
+        mockRow("rose", "on"),
+        mockRow("green square"),
+        mockRow("amber square"),
+        mockRow("cyan"),
+      ),
     ),
     mock("mock-pane"),
   );
@@ -495,7 +504,7 @@ function classicMock(): HTMLDivElement {
       mock("mock-avatar amber square"),
       mock("mock-avatar cyan square"),
     ),
-    mock("mock-list", mockGroup(true), mockRow("violet"), mockRow("rose", "on"), mockRow("cyan")),
+    mock("mock-list", mockGroup(), mockRow("violet"), mockRow("rose", "on"), mockRow("cyan")),
     mock("mock-pane"),
   );
 }
@@ -512,7 +521,7 @@ const LAYOUT_CARDS: {
     title: "Unified",
     tag: "Default",
     desc:
-      "One merged list. Direct Messages and Servers are folders in the same column, so switching between them never moves you to a different navigation surface.",
+      "One column with a small folder switcher on top. DMs, Servers and your own folders are tabs in the same strip, so you move between them in one click without changing navigation surface — and the list stays short because only the active folder is shown.",
     preview: unifiedMock,
   },
   {
@@ -526,11 +535,11 @@ const LAYOUT_CARDS: {
 ];
 
 function appearance(): AppearanceConfig {
-  return state?.appearance ?? { layout: "unified", folders: [] };
+  return state?.appearance ?? { layout: "unified", folders: [], activeFolder: "dms" };
 }
 
 function saveAppearance(next: AppearanceConfig, status?: string): void {
-  void sable.setAppearance(next).then((stored) => {
+  void nyacord.setAppearance(next).then((stored) => {
     if (state) state = { ...state, appearance: stored };
     renderAppearance();
     if (status) $("#folder-status").textContent = status;
@@ -565,10 +574,48 @@ function renderAppearance(): void {
 
   $("#layout-note").textContent =
     current.layout === "unified"
-      ? "Folders below appear in the unified list. Collapsed state is remembered per folder."
-      : "Folders are only shown by the unified layout. They stay saved while Classic is selected.";
+      ? "DMs and Servers are always the first two tabs. Your folders follow them."
+      : "The switcher and folders belong to the unified layout. They stay saved while Classic is selected.";
 
+  renderSwitcher(current);
   renderFolders(current);
+}
+
+/**
+ * The switcher itself, rendered from the same data the layout uses rather than
+ * as a picture of it — so what is shown here is what ships.
+ */
+function renderSwitcher(current: AppearanceConfig): void {
+  const strip = $("#switcher");
+  strip.textContent = "";
+
+  for (const tab of folderTabs(current)) {
+    const pill = document.createElement("button");
+    const active = tab.id === current.activeFolder;
+    pill.className = active ? "pill on" : "pill";
+    pill.setAttribute("role", "tab");
+    pill.setAttribute("aria-selected", String(active));
+
+    const tone = document.createElement("span");
+    tone.className = `tone ${tab.tone}`;
+    pill.append(tone);
+
+    const label = document.createElement("span");
+    label.textContent = tab.label;
+    pill.append(label);
+
+    // Built-in tabs are filled by Discord, so a count would be a number we do
+    // not have rather than a zero.
+    if (!tab.builtin) {
+      const count = document.createElement("span");
+      count.className = "count";
+      count.textContent = String(tab.count);
+      pill.append(count);
+    }
+
+    pill.addEventListener("click", () => saveAppearance({ ...current, activeFolder: tab.id }));
+    strip.append(pill);
+  }
 }
 
 function renderFolders(current: AppearanceConfig): void {
@@ -650,7 +697,7 @@ function renderFolders(current: AppearanceConfig): void {
         grow2.append(entryName, target);
         row.append(grow2);
 
-        row.append(button("Open", () => void sable.openChat(entry.target)));
+        row.append(button("Open", () => void nyacord.openChat(entry.target)));
         const drop = button("Remove", () =>
           update(index, (draft) => {
             draft.entries = draft.entries.filter((_, i) => i !== entryIndex);
@@ -730,7 +777,6 @@ $("#folder-add").addEventListener("click", () => {
           id: `f${Date.now().toString(36)}`,
           name,
           tone: FOLDER_TONES[current.folders.length % FOLDER_TONES.length] ?? "violet",
-          collapsed: false,
           entries: [],
         },
       ],
@@ -742,7 +788,7 @@ $("#folder-add").addEventListener("click", () => {
 // ---------------------------------------------------------------- inspector
 
 async function refreshLedger(): Promise<void> {
-  renderLedger(await sable.getLedger());
+  renderLedger(await nyacord.getLedger());
 }
 
 function renderLedger(snapshot: LedgerSnapshot): void {
@@ -783,7 +829,7 @@ function renderLedger(snapshot: LedgerSnapshot): void {
 }
 
 $("#clear-ledger").addEventListener("click", () => {
-  void sable.clearLedger().then(refreshLedger);
+  void nyacord.clearLedger().then(refreshLedger);
 });
 
 // -------------------------------------------------------------------- about
@@ -824,7 +870,7 @@ function render(next: AppState): void {
 }
 
 populateChannelOptions();
-sable.onStateChanged(render);
-sable.onLedgerChanged(renderLedger);
-sable.onShowPane(showPane);
-void sable.getState().then(render);
+nyacord.onStateChanged(render);
+nyacord.onLedgerChanged(renderLedger);
+nyacord.onShowPane(showPane);
+void nyacord.getState().then(render);

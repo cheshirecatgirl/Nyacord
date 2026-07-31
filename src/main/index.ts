@@ -55,7 +55,7 @@ function configureDns(): void {
       secureDnsServers: dns.servers,
     });
   } catch (error) {
-    console.error("[sable] failed to configure secure DNS:", error);
+    console.error("[nyacord] failed to configure secure DNS:", error);
   }
 }
 

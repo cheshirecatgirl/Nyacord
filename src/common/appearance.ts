@@ -3,9 +3,15 @@
  *
  * The headline setting is the navigation layout. `classic` is Discord's own
  * arrangement — a narrow rail of server icons on the far left, a separate
- * channel/DM column beside it. `unified` is a single merged column in the
- * Telegram idiom: one scrollable list, grouped into folders, where a server
- * reads exactly like a DM (icon, title, one line) until you open it.
+ * channel/DM column beside it. `unified` is a single column in the Telegram
+ * idiom: a small folder switcher along the top, and below it one list showing
+ * only the active folder, where a server reads exactly like a DM (icon, title,
+ * one line) until you open it.
+ *
+ * The switcher is what makes this work. Stacking Direct Messages and Servers
+ * on top of each other in one scroll would just be two lists sharing a
+ * container — more scrolling, not less. One list at a time with a one-click
+ * switch keeps the column short and makes the current context obvious.
  *
  * The naming is deliberate. "Modern" ages badly and says nothing; "legacy"
  * implies the other option is deprecated when it is a perfectly good layout
@@ -53,25 +59,79 @@ export interface ChatFolder {
   readonly id: string;
   name: string;
   tone: FolderTone;
-  /** Collapsed state is remembered, which is the point of the layout. */
-  collapsed: boolean;
   entries: ChatEntry[];
+}
+
+/**
+ * The two folders that always exist. They are not stored — a config file
+ * cannot rename or delete them — and they always lead the switcher, so the
+ * first two tabs are in the same place no matter how the rest is arranged.
+ */
+export const BUILTIN_FOLDERS = [
+  { id: "dms", label: "DMs", tone: "violet" },
+  { id: "servers", label: "Servers", tone: "cyan" },
+] as const satisfies readonly { id: string; label: string; tone: FolderTone }[];
+
+const RESERVED_FOLDER_IDS: readonly string[] = BUILTIN_FOLDERS.map((folder) => folder.id);
+
+export function isReservedFolderId(id: string): boolean {
+  return RESERVED_FOLDER_IDS.includes(id);
 }
 
 export interface AppearanceConfig {
   layout: LayoutMode;
   /**
-   * User-defined folders, shown after the two built-in groups. Empty by
-   * default — nothing is invented on your behalf.
+   * User-defined folders, shown in the switcher after the two built-ins. Empty
+   * by default — nothing is invented on your behalf.
    */
   folders: ChatFolder[];
+  /**
+   * Which tab the unified list is showing. Remembered across restarts, because
+   * a navigation UI that forgets where you were is the thing this layout exists
+   * to fix.
+   */
+  activeFolder: string;
+}
+
+export interface FolderTab {
+  readonly id: string;
+  readonly label: string;
+  readonly tone: FolderTone;
+  readonly builtin: boolean;
+  readonly count: number;
+}
+
+/**
+ * The switcher's contents: the two built-ins followed by the user's folders.
+ * Derived rather than stored, so the tab strip can never disagree with the
+ * folder list it came from.
+ */
+export function folderTabs(config: AppearanceConfig): FolderTab[] {
+  return [
+    ...BUILTIN_FOLDERS.map((folder) => ({
+      id: folder.id,
+      label: folder.label,
+      tone: folder.tone as FolderTone,
+      builtin: true,
+      // Built-in groups are populated by Discord itself, not by us, so there
+      // is no count to show.
+      count: -1,
+    })),
+    ...config.folders.map((folder) => ({
+      id: folder.id,
+      label: folder.name,
+      tone: folder.tone,
+      builtin: false,
+      count: folder.entries.length,
+    })),
+  ];
 }
 
 export const MAX_FOLDERS = 12;
 export const MAX_ENTRIES_PER_FOLDER = 100;
 
 export function defaultAppearance(): AppearanceConfig {
-  return { layout: "unified", folders: [] };
+  return { layout: "unified", folders: [], activeFolder: "dms" };
 }
 
 /**
@@ -113,6 +173,15 @@ function cleanId(value: unknown, fallback: string): string {
   return typeof value === "string" && /^[A-Za-z0-9_-]{1,32}$/.test(value) ? value : fallback;
 }
 
+/**
+ * A user folder may not claim a built-in id, or the switcher would show two
+ * tabs that resolve to the same thing.
+ */
+function cleanFolderId(value: unknown, fallback: string): string {
+  const id = cleanId(value, fallback);
+  return isReservedFolderId(id) ? `${id}-1` : id;
+}
+
 function cleanName(value: unknown, fallback: string, max: number): string {
   if (typeof value !== "string") return fallback;
   const trimmed = value.trim().slice(0, max);
@@ -138,7 +207,7 @@ export function normalizeAppearance(input: unknown): AppearanceConfig {
     if (typeof candidate !== "object" || candidate === null) continue;
     const folder = candidate as Record<string, unknown>;
 
-    const id = cleanId(folder["id"], `folder${folders.length + 1}`);
+    const id = cleanFolderId(folder["id"], `folder${folders.length + 1}`);
     if (seenFolders.has(id)) continue;
     seenFolders.add(id);
 
@@ -165,10 +234,16 @@ export function normalizeAppearance(input: unknown): AppearanceConfig {
       id,
       name: cleanName(folder["name"], "Folder", 32),
       tone: isFolderTone(folder["tone"]) ? folder["tone"] : "violet",
-      collapsed: folder["collapsed"] === true,
       entries,
     });
   }
 
-  return { layout, folders };
+  // A remembered tab that no longer exists — because the folder was deleted,
+  // or the config came from another machine — falls back to the first built-in
+  // rather than leaving the switcher pointing at nothing.
+  const requested = raw["activeFolder"];
+  const known = new Set<string>([...RESERVED_FOLDER_IDS, ...folders.map((folder) => folder.id)]);
+  const activeFolder = typeof requested === "string" && known.has(requested) ? requested : "dms";
+
+  return { layout, folders, activeFolder };
 }

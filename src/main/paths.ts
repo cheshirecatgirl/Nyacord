@@ -9,7 +9,7 @@ let decision: PortableDecision | null = null;
 /**
  * The directory the app was launched from. For a packaged build this is where
  * the executable lives; unpackaged we walk up out of `dist/` so that a
- * developer's `sable-data` sits at the project root.
+ * developer's `nyacord-data` sits at the project root.
  */
 function execDir(): string {
   if (app.isPackaged) return dirname(app.getPath("exe"));

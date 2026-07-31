@@ -12,9 +12,9 @@
  */
 
 /** Tokens Electron appends that no browser would ever send. */
-const STRIPPED_TOKENS = /\s(?:Electron|Sable)\/[^\s]+/g;
+const STRIPPED_TOKENS = /\s(?:Electron|Nyacord)\/[^\s]+/g;
 
-export function sanitizeUserAgent(raw: string, productName = "Sable"): string {
+export function sanitizeUserAgent(raw: string, productName = "Nyacord"): string {
   const productToken = new RegExp(`\\s${escapeRegExp(productName)}\\/[^\\s]+`, "g");
   return raw.replace(STRIPPED_TOKENS, "").replace(productToken, "").replace(/\s{2,}/g, " ").trim();
 }

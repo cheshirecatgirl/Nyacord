@@ -1,6 +1,6 @@
 // Generates the application and tray icons as plain PNGs.
 //
-// Sable has zero runtime dependencies and we would rather not add an image
+// Nyacord has zero runtime dependencies and we would rather not add an image
 // library (or check in opaque binaries) just to draw two rounded squares, so
 // the PNGs are encoded here from raw RGBA using only node:zlib.
 import { deflateSync } from "node:zlib";

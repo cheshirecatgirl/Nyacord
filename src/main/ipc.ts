@@ -5,7 +5,7 @@ import { IPC, type CreateProfileRequest } from "../common/ipc";
 import { normalizeAppearance, normalizeChatTarget } from "../common/appearance";
 import { normalizeDns } from "../common/network";
 import { normalizePolicy, presetPolicy, type PresetName } from "../common/policy";
-import type { SableConfig } from "./config";
+import type { NyacordConfig } from "./config";
 import type { ProfileStore } from "./profiles";
 import type { PrivacyLedger } from "./privacy/ledger";
 import { openExternalSafely } from "./security/session";
@@ -19,7 +19,7 @@ import type { AppShell } from "./window";
  */
 export function registerIpc(
   shell: AppShell,
-  config: JsonStore<SableConfig>,
+  config: JsonStore<NyacordConfig>,
   profiles: ProfileStore,
   ledger: PrivacyLedger,
   /** Re-applies the process-wide host resolver configuration. */

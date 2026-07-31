@@ -1,6 +1,6 @@
 /**
  * Discord ships three public release channels. Each one is a separate origin
- * with its own cookies, its own build pipeline and its own session, so Sable
+ * with its own cookies, its own build pipeline and its own session, so Nyacord
  * treats them as first-class targets rather than as a hidden setting.
  */
 

@@ -6,12 +6,12 @@ on:
   pull_request:
 
 jobs:
-  sable:
-    name: Sable — typecheck and unit tests
+  nyacord:
+    name: Nyacord — typecheck and unit tests
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: sable
+        working-directory: nyacord
 
     steps:
       - uses: actions/checkout@v4
@@ -20,7 +20,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: sable/package-lock.json
+          cache-dependency-path: nyacord/package-lock.json
 
       # `npm ci` refuses to install if package.json and the lockfile disagree,
       # which is the property we want in CI.
@@ -45,11 +45,11 @@ jobs:
           fi
 
   e2e:
-    name: Sable — end-to-end
+    name: Nyacord — end-to-end
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: sable
+        working-directory: nyacord
 
     steps:
       - uses: actions/checkout@v4
@@ -58,7 +58,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: sable/package-lock.json
+          cache-dependency-path: nyacord/package-lock.json
 
       # Unlike the unit job this one launches the real app, so it needs the
       # Electron binary. Chromium's sandbox refuses to run as root; the GitHub

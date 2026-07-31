@@ -4,7 +4,7 @@
 
 Who we are defending against, in rough order of likelihood.
 
-| Adversary | Capability | Sable's answer |
+| Adversary | Capability | Nyacord's answer |
 | --- | --- | --- |
 | A malicious link or embed | Runs script in Discord's origin | Sandboxed renderer, no preload, no bridge to reach |
 | A hostile web page after navigation | Full page control | Navigation containment — the view cannot leave the channel host |
@@ -97,7 +97,7 @@ Flipped on the packaged binary by `build/afterPack.cjs`:
 | `GrantFileProtocolExtraPrivileges` | off | `file://` pages get nothing extra |
 
 The first two matter most: without them, an attacker who can set an environment
-variable does not need a bug in Sable at all.
+variable does not need a bug in Nyacord at all.
 
 ## The settings panel
 

@@ -5,7 +5,7 @@ import { CHANNELS } from "../common/channels";
 import { IPC, type AppState, type PaneId } from "../common/ipc";
 import type { PermissionKey } from "../common/policy";
 import { parseBadgeFromTitle, type Profile, type ProfileSummary } from "../common/profile";
-import type { SableConfig } from "./config";
+import type { NyacordConfig } from "./config";
 import type { ProfileStore } from "./profiles";
 import type { PrivacyLedger } from "./privacy/ledger";
 import { ViewWatchdog } from "./reliability/watchdog";
@@ -66,7 +66,7 @@ export class AppShell {
   private allowClose = false;
 
   constructor(
-    private readonly config: JsonStore<SableConfig>,
+    private readonly config: JsonStore<NyacordConfig>,
     private readonly profiles: ProfileStore,
     private readonly ledger: PrivacyLedger,
     private readonly info: RuntimeInfo,
@@ -79,7 +79,7 @@ export class AppShell {
       y: bounds.y,
       minWidth: 480,
       minHeight: 360,
-      title: "Sable",
+      title: "Nyacord",
       backgroundColor: nativeTheme.shouldUseDarkColors ? "#111214" : "#ffffff",
       show: false,
     });
@@ -183,7 +183,7 @@ export class AppShell {
     containNavigation(view.webContents, channel);
 
     const watchdog = new ViewWatchdog(view, channel.appUrl, {
-      onDegraded: (cause) => console.warn(`[sable] ${profile.name}: ${cause}`),
+      onDegraded: (cause) => console.warn(`[nyacord] ${profile.name}: ${cause}`),
     });
 
     const entry: ProfileView = { profile, view, watchdog, badge: -1 };
@@ -348,7 +348,7 @@ export class AppShell {
         preload: join(__dirname, "..", "preload", "shell.js"),
         // The panel is our own local UI; it never loads remote content, so it
         // gets a dedicated in-memory partition with no cookies at all.
-        partition: "sable-shell",
+        partition: "nyacord-shell",
       },
     });
 

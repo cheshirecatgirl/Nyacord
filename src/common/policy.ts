@@ -8,7 +8,7 @@
 export type PermissionDecision = "allow" | "ask" | "deny";
 
 /**
- * The permissions Sable is willing to have an opinion about. Anything Chromium
+ * The permissions Nyacord is willing to have an opinion about. Anything Chromium
  * asks for that is not on this list is denied outright and logged.
  */
 export const PERMISSION_KEYS = [

@@ -447,6 +447,41 @@ select:focus-visible {
   overflow: hidden;
 }
 
+.mock-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* The switcher: one row of small pills, the active one filled. */
+.mock-switcher {
+  display: flex;
+  gap: 3px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex: none;
+}
+
+.mock-tab {
+  height: 6px;
+  border-radius: 3px;
+  background: #2e313a;
+}
+
+.mock-tab.sm {
+  width: 16px;
+}
+
+.mock-tab.md {
+  width: 24px;
+}
+
+.mock-tab.on {
+  background: var(--accent);
+}
+
 .mock-rail {
   width: 26px;
   flex: none;
@@ -554,6 +589,62 @@ select:focus-visible {
   flex: 1;
   border-radius: 5px;
   background: #17181c;
+}
+
+/* --------------------------------------------------------------- switcher */
+
+/*
+ * Deliberately understated: it sits above a chat list all day, so it reads as
+ * a quiet strip rather than a second row of buttons competing with the list.
+ */
+.switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 5px;
+  margin-bottom: 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg-sunken);
+}
+
+.switcher .pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 550;
+  border: none;
+}
+
+.switcher .pill:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.switcher .pill.on {
+  background: var(--accent-dim);
+  color: var(--accent);
+  font-weight: 650;
+}
+
+.switcher .pill .tone {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.switcher .pill .count {
+  font-size: 10.5px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.switcher .pill.on .count {
+  color: var(--accent);
 }
 
 /* ---------------------------------------------------------------- folders */

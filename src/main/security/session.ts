@@ -114,7 +114,7 @@ export async function applyProxy(ses: Session, proxy: ProxyConfig): Promise<void
     await ses.forceReloadProxyConfig();
     await ses.closeAllConnections();
   } catch (error) {
-    console.error("[sable] failed to apply proxy:", error);
+    console.error("[nyacord] failed to apply proxy:", error);
   }
 }
 

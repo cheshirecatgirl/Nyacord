@@ -1,8 +1,8 @@
 # Privacy
 
-What Sable does, what it cannot do, and how to check both yourself.
+What Nyacord does, what it cannot do, and how to check both yourself.
 
-## What Sable itself collects
+## What Nyacord itself collects
 
 Nothing. There is no analytics, no crash reporting, no update ping, no
 telemetry of any kind, and no network destination in the codebase other than
@@ -13,7 +13,7 @@ This is easy to verify and you should: `grep -r "https://" src/` returns
 Discord hosts and documentation links, and `dependencies` in `package.json` is
 empty.
 
-## What Sable blocks
+## What Nyacord blocks
 
 Every entry below is enforced in the main process, is covered by
 `test/rules.test.ts`, and is visible live in the Privacy Inspector
@@ -62,7 +62,7 @@ has no such cost — it is purely outbound.
 | Global Privacy Control | Sends `Sec-GPC: 1` |
 | Spellchecker | **Off by default** — Chromium fetches dictionaries from Google on first use |
 
-Sable does **not** lie about your operating system. Claiming to be Windows
+Nyacord does **not** lie about your operating system. Claiming to be Windows
 while `navigator.platform`, font metrics and media capabilities all say Linux
 makes you *more* identifiable, not less, and the mismatch is itself a
 fingerprint. We remove the token no browser would ever send and stop there.
@@ -101,7 +101,7 @@ Two deliberate safety choices:
   executed by the browser; over plaintext HTTP, anyone on the path could
   rewrite it and redirect every request you make.
 
-Sable does **not** pick a DoH provider for you. Silently routing every lookup
+Nyacord does **not** pick a DoH provider for you. Silently routing every lookup
 to a resolver of our choosing would move your DNS from one third party to
 another without asking. `automatic` upgrades to DoH when your own resolver
 supports it; naming a server is opt-in. Choosing `secure` with no valid server
@@ -118,7 +118,7 @@ Bluetooth are refused outright at the device-handler level, not merely
 unprompted. Only the channel's own origin may request anything; an iframe from
 an embedded activity is refused silently.
 
-## What Sable cannot do
+## What Nyacord cannot do
 
 Stated plainly, because a privacy tool that overstates its reach is worse than
 one that does less.
@@ -138,7 +138,7 @@ not. The downside of looking anomalous lands on your account.
 **`X-Fingerprint` cannot be removed.** Discord issues it and the client needs
 it.
 
-**Discord still sees your traffic.** Sable is a hardened browser, not a proxy.
+**Discord still sees your traffic.** Nyacord is a hardened browser, not a proxy.
 Your IP address, the servers you are in, and everything you send are visible to
 Discord exactly as they would be in Firefox. If your threat model includes
 Discord itself, no client-side tool solves it — that is a question about
@@ -150,7 +150,7 @@ host resolver is likewise a single process-wide object. So WebRTC and secure
 DNS follow the *global* setting even when a profile overrides everything else.
 Proxies are genuinely per-profile, because Chromium attaches them to sessions.
 
-**Portability is not perfect.** Sable directs its own state — config, cookies,
+**Portability is not perfect.** Nyacord directs its own state — config, cookies,
 cache, logs — to the portable directory. Chromium may still use the OS
 temporary directory for scratch data during a session.
 

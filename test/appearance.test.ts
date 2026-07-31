@@ -2,9 +2,12 @@ import { strict as assert } from "node:assert";
 import { test, describe } from "node:test";
 
 import {
+  BUILTIN_FOLDERS,
   MAX_FOLDERS,
   defaultAppearance,
+  folderTabs,
   isDirectMessageTarget,
+  isReservedFolderId,
   normalizeAppearance,
   normalizeChatTarget,
 } from "../src/common/appearance";
@@ -63,6 +66,7 @@ describe("normalizeAppearance", () => {
     assert.deepEqual(value, defaultAppearance());
     assert.equal(value.layout, "unified");
     assert.deepEqual(value.folders, []);
+    assert.equal(value.activeFolder, "dms");
   });
 
   test("survives garbage", () => {
@@ -81,7 +85,6 @@ describe("normalizeAppearance", () => {
           id: "work",
           name: "Work",
           tone: "green",
-          collapsed: true,
           entries: [{ id: "a", name: "Standup", target: "https://discord.com/channels/1/2" }],
         },
       ],
@@ -89,7 +92,6 @@ describe("normalizeAppearance", () => {
     assert.equal(value.layout, "classic");
     assert.equal(value.folders.length, 1);
     assert.equal(value.folders[0]?.tone, "green");
-    assert.equal(value.folders[0]?.collapsed, true);
     assert.equal(value.folders[0]?.entries[0]?.target, "/channels/1/2");
   });
 
@@ -148,5 +150,89 @@ describe("normalizeAppearance", () => {
   test("replaces an empty name instead of rendering a blank row", () => {
     const value = normalizeAppearance({ folders: [{ id: "f", name: "   ", entries: [] }] });
     assert.equal(value.folders[0]?.name, "Folder");
+  });
+});
+
+describe("the folder switcher", () => {
+  test("always leads with the two built-in tabs", () => {
+    const tabs = folderTabs(defaultAppearance());
+    assert.deepEqual(
+      tabs.map((tab) => tab.id),
+      ["dms", "servers"],
+    );
+    assert.equal(
+      tabs.every((tab) => tab.builtin),
+      true,
+    );
+  });
+
+  test("appends user folders after the built-ins, in order", () => {
+    const config = normalizeAppearance({
+      folders: [
+        { id: "work", name: "Work", tone: "green", entries: [] },
+        {
+          id: "games",
+          name: "Games",
+          tone: "amber",
+          entries: [{ id: "a", name: "Raid", target: "/channels/1/2" }],
+        },
+      ],
+    });
+    const tabs = folderTabs(config);
+    assert.deepEqual(
+      tabs.map((tab) => tab.id),
+      ["dms", "servers", "work", "games"],
+    );
+    assert.deepEqual(
+      tabs.map((tab) => tab.label),
+      ["DMs", "Servers", "Work", "Games"],
+    );
+  });
+
+  test("reports a count only for folders whose contents we own", () => {
+    // The built-in groups are filled by Discord, so a count there would be a
+    // number we do not have rather than a genuine zero.
+    const config = normalizeAppearance({
+      folders: [
+        {
+          id: "work",
+          name: "Work",
+          entries: [{ id: "a", name: "Standup", target: "/channels/1/2" }],
+        },
+      ],
+    });
+    const tabs = folderTabs(config);
+    assert.equal(tabs[0]?.count, -1);
+    assert.equal(tabs[1]?.count, -1);
+    assert.equal(tabs[2]?.count, 1);
+  });
+
+  test("remembers the active tab", () => {
+    const value = normalizeAppearance({
+      folders: [{ id: "work", name: "Work", entries: [] }],
+      activeFolder: "work",
+    });
+    assert.equal(value.activeFolder, "work");
+  });
+
+  test("falls back when the remembered tab no longer exists", () => {
+    // Deleting a folder, or moving the config between machines, must not leave
+    // the switcher pointing at nothing.
+    assert.equal(normalizeAppearance({ activeFolder: "deleted" }).activeFolder, "dms");
+    assert.equal(normalizeAppearance({ activeFolder: 42 }).activeFolder, "dms");
+    assert.equal(normalizeAppearance({ activeFolder: "servers" }).activeFolder, "servers");
+  });
+
+  test("stops a user folder from impersonating a built-in tab", () => {
+    for (const builtin of BUILTIN_FOLDERS) {
+      const value = normalizeAppearance({
+        folders: [{ id: builtin.id, name: "Impostor", entries: [] }],
+      });
+      assert.notEqual(value.folders[0]?.id, builtin.id);
+      assert.equal(isReservedFolderId(value.folders[0]?.id ?? ""), false);
+      // The switcher must still show exactly one tab per id.
+      const ids = folderTabs(value).map((tab) => tab.id);
+      assert.equal(new Set(ids).size, ids.length);
+    }
   });
 });

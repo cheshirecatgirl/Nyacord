@@ -18,14 +18,14 @@ export class AppTray {
   create(): void {
     const icon = nativeImage.createFromPath(join(__dirname, "..", "..", "..", "assets", "tray.png"));
     if (icon.isEmpty()) {
-      console.warn("[sable] tray icon missing; running without a tray");
+      console.warn("[nyacord] tray icon missing; running without a tray");
       return;
     }
     // macOS renders the tray icon as a template so it follows the menu bar theme.
     if (process.platform === "darwin") icon.setTemplateImage(true);
 
     this.tray = new Tray(icon);
-    this.tray.setToolTip("Sable");
+    this.tray.setToolTip("Nyacord");
     this.tray.on("click", () => this.shell.focus());
     this.refresh();
   }
@@ -50,11 +50,11 @@ export class AppTray {
     if (signature === this.signature) return;
     this.signature = signature;
 
-    this.tray.setToolTip(total > 0 ? `Sable — ${total} unread` : "Sable");
+    this.tray.setToolTip(total > 0 ? `Nyacord — ${total} unread` : "Nyacord");
 
     this.tray.setContextMenu(
       Menu.buildFromTemplate([
-        { label: "Open Sable", click: () => this.shell.focus() },
+        { label: "Open Nyacord", click: () => this.shell.focus() },
         { type: "separator" },
         ...profiles.map((profile) => ({
           label:

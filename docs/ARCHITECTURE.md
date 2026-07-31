@@ -2,7 +2,7 @@
 
 ## The one-sentence version
 
-Sable is a purpose-built browser that loads Discord's web application and
+Nyacord is a purpose-built browser that loads Discord's web application and
 enforces privacy and security policy from outside the page, where the page
 cannot see or subvert it.
 
@@ -12,9 +12,9 @@ cannot see or subvert it.
 main process  ── privileged. Owns config, policy, sessions, filtering.
    │
    └── BaseWindow
-        ├── WebContentsView  (profile "work"   → persist:sable-a1b2)  ← Discord, NO preload
-        ├── WebContentsView  (profile "canary" → persist:sable-c3d4)  ← Discord, NO preload
-        └── WebContentsView  (shell UI, file://, partition "sable-shell") ← our settings panel
+        ├── WebContentsView  (profile "work"   → persist:nyacord-a1b2)  ← Discord, NO preload
+        ├── WebContentsView  (profile "canary" → persist:nyacord-c3d4)  ← Discord, NO preload
+        └── WebContentsView  (shell UI, file://, partition "nyacord-shell") ← our settings panel
 ```
 
 Only one profile view is attached to the window at a time; switching profiles
@@ -165,7 +165,7 @@ be pure cost.
   The two use different output formats, and the difference matters: the preload
   is CommonJS, the renderer is an **IIFE**. A CommonJS bundle loaded as a
   classic `<script>` puts its top-level `var` declarations on `window`, which
-  collides with the read-only `window.sable` that `contextBridge` installs and
+  collides with the read-only `window.nyacord` that `contextBridge` installs and
   throws before any UI renders.
 - Renderer HTML and CSS are copied.
 - `electron-builder` packages, and `build/afterPack.cjs` flips Electron fuses.

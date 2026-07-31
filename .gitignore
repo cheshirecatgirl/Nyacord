@@ -1,6 +1,6 @@
 node_modules/
 dist/
 release/
-sable-data/
+nyacord-data/
 *.log
 .DS_Store

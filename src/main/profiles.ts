@@ -4,7 +4,7 @@ import { CHANNELS, type ChannelId } from "../common/channels";
 import { defaultProxy, normalizeProxy, type ProxyConfig } from "../common/network";
 import type { PrivacyPolicy } from "../common/policy";
 import { newProfileId, partitionFor, type Profile } from "../common/profile";
-import type { SableConfig } from "./config";
+import type { NyacordConfig } from "./config";
 import type { JsonStore } from "./store";
 
 /**
@@ -13,7 +13,7 @@ import type { JsonStore } from "./store";
  * shows nothing and offers no way out; that state simply does not exist here.
  */
 export class ProfileStore {
-  constructor(private readonly store: JsonStore<SableConfig>) {
+  constructor(private readonly store: JsonStore<NyacordConfig>) {
     if (this.all().length === 0) {
       this.create({ name: "Discord", channel: "stable", ephemeral: false });
     }

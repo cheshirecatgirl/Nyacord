@@ -6,7 +6,7 @@
 // general-purpose Node interpreter, and `NODE_OPTIONS` lets an attacker who
 // controls the environment inject a module into our process.
 //
-// Turning them off is the difference between "an attacker needs a bug in Sable"
+// Turning them off is the difference between "an attacker needs a bug in Nyacord"
 // and "an attacker needs an environment variable".
 const { flipFuses, FuseVersion, FuseV1Options } = require("@electron/fuses");
 const path = require("node:path");
@@ -22,7 +22,7 @@ exports.default = async function afterPack(context) {
   }[electronPlatformName];
 
   if (!executable) {
-    console.warn(`[sable] no fuse target for platform ${electronPlatformName}`);
+    console.warn(`[nyacord] no fuse target for platform ${electronPlatformName}`);
     return;
   }
 
@@ -46,5 +46,5 @@ exports.default = async function afterPack(context) {
     [FuseV1Options.GrantFileProtocolExtraPrivileges]: false,
   });
 
-  console.log(`[sable] fuses applied to ${executable}`);
+  console.log(`[nyacord] fuses applied to ${executable}`);
 };

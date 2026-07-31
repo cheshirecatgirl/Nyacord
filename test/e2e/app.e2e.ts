@@ -25,12 +25,12 @@ import { _electron as electron, type ElectronApplication, type Page } from "play
 
 import type { AppState } from "../../src/common/ipc";
 import type { DnsConfig, ProxyConfig } from "../../src/common/network";
-import type { SableApi } from "../../src/preload/shell";
+import type { NyacordApi } from "../../src/preload/shell";
 
 declare global {
   // The bridge the preload installs, as the panel's own scripts see it.
   interface Window {
-    sable: SableApi;
+    nyacord: NyacordApi;
   }
 }
 
@@ -79,13 +79,13 @@ async function until<T>(check: () => Promise<T> | T, timeoutMs = 15_000): Promis
 
 /** Reads the state the main process would hand the UI. */
 function state(): Promise<AppState> {
-  return panel.evaluate(() => window.sable.getState());
+  return panel.evaluate(() => window.nyacord.getState());
 }
 
 before(async () => {
   // A throwaway portable directory keeps the suite off the developer's real
   // config and exercises the `--data-dir` path at the same time.
-  dataDir = mkdtempSync(join(tmpdir(), "sable-e2e-"));
+  dataDir = mkdtempSync(join(tmpdir(), "nyacord-e2e-"));
 
   app = await electron.launch({
     executablePath: electronPath,
@@ -107,8 +107,8 @@ before(async () => {
   await until(async () => {
     const opened = await app.evaluate(({ Menu }) => {
       const menu = Menu.getApplicationMenu();
-      const sable = menu?.items.find((item) => (item.label || "").includes("Sable"));
-      const entry = sable?.submenu?.items.find((item) => (item.label || "").startsWith("Network"));
+      const nyacord = menu?.items.find((item) => (item.label || "").includes("Nyacord"));
+      const entry = nyacord?.submenu?.items.find((item) => (item.label || "").startsWith("Network"));
       if (!entry) return false;
       entry.click();
       return true;
@@ -151,8 +151,8 @@ describe("startup", () => {
 
   test("exposes the preload bridge", async () => {
     // A sandboxed preload cannot `require` relative modules; when that broke,
-    // `window.sable` silently never appeared and the panel stayed empty.
-    assert.equal(await panel.evaluate(() => typeof window.sable), "object");
+    // `window.nyacord` silently never appeared and the panel stayed empty.
+    assert.equal(await panel.evaluate(() => typeof window.nyacord), "object");
   });
 
   test("opens on the pane that was requested, not the default one", async () => {
@@ -163,7 +163,7 @@ describe("startup", () => {
 describe("profiles", () => {
   test("creates a profile on another release channel", async () => {
     const id = await panel.evaluate(() =>
-      window.sable.createProfile({ name: "E2E Canary", channel: "canary", ephemeral: false }),
+      window.nyacord.createProfile({ name: "E2E Canary", channel: "canary", ephemeral: false }),
     );
     assert.ok(id);
 
@@ -178,12 +178,12 @@ describe("profiles", () => {
     // The delete path also wipes the profile's session; the confirmation the
     // user sees promises both, and for a while only the config entry went.
     const id = await panel.evaluate(() =>
-      window.sable.createProfile({ name: "Doomed", channel: "ptb", ephemeral: false }),
+      window.nyacord.createProfile({ name: "Doomed", channel: "ptb", ephemeral: false }),
     );
     assert.ok(id);
     await until(async () => (await state()).profiles.some((profile) => profile.id === id));
 
-    assert.equal(await panel.evaluate((target) => window.sable.deleteProfile(target), id), true);
+    assert.equal(await panel.evaluate((target) => window.nyacord.deleteProfile(target), id), true);
     await until(async () => !(await state()).profiles.some((profile) => profile.id === id));
   });
 
@@ -194,7 +194,7 @@ describe("profiles", () => {
 
 describe("privacy policy", () => {
   test("applies a preset", async () => {
-    await panel.evaluate(() => window.sable.applyPreset("paranoid"));
+    await panel.evaluate(() => window.nyacord.applyPreset("paranoid"));
     const current = await until(async () => {
       const next = await state();
       return next.policy.preset === "paranoid" ? next : null;
@@ -207,14 +207,14 @@ describe("privacy policy", () => {
     // DNS is a network decision that outlives a privacy preset. Routing it
     // through setPolicy used to silently mark the whole policy "custom".
     const dns: DnsConfig = { mode: "secure", servers: ["https://dns.quad9.net/dns-query"] };
-    const stored = await panel.evaluate((value) => window.sable.setDns(value), dns);
+    const stored = await panel.evaluate((value) => window.nyacord.setDns(value), dns);
     assert.deepEqual(stored, dns);
     assert.equal((await state()).policy.preset, "paranoid");
   });
 
   test("refuses secure DNS with no usable server rather than killing resolution", async () => {
     const stored = await panel.evaluate(() =>
-      window.sable.setDns({ mode: "secure", servers: ["http://not-secure.example"] }),
+      window.nyacord.setDns({ mode: "secure", servers: ["http://not-secure.example"] }),
     );
     assert.equal(stored.mode, "automatic");
   });
@@ -239,14 +239,14 @@ describe("appearance", () => {
 
   test("stores folders and normalizes entry targets", async () => {
     const stored = await panel.evaluate(() =>
-      window.sable.setAppearance({
+      window.nyacord.setAppearance({
         layout: "unified",
+        activeFolder: "work",
         folders: [
           {
             id: "work",
             name: "Work",
             tone: "green",
-            collapsed: false,
             entries: [
               { id: "a", name: "Standup", target: "https://canary.discord.com/channels/1/2" },
               { id: "b", name: "Elsewhere", target: "https://evil.example/channels/1/2" },
@@ -261,11 +261,14 @@ describe("appearance", () => {
     // reduced to a path so the folder works on any release channel.
     assert.equal(stored.folders[0]?.entries.length, 1);
     assert.equal(stored.folders[0]?.entries[0]?.target, "/channels/1/2");
+    // The remembered tab survives the round-trip, which is what makes the
+    // switcher keep your place across restarts.
+    assert.equal(stored.activeFolder, "work");
   });
 
   test("refuses to navigate to a target outside Discord", async () => {
-    assert.equal(await panel.evaluate(() => window.sable.openChat("https://evil.example/x")), false);
-    assert.equal(await panel.evaluate(() => window.sable.openChat("/not/a/channel")), false);
+    assert.equal(await panel.evaluate(() => window.nyacord.openChat("https://evil.example/x")), false);
+    assert.equal(await panel.evaluate(() => window.nyacord.openChat("/not/a/channel")), false);
   });
 });
 
@@ -282,7 +285,7 @@ describe("request filtering", () => {
     assert.match(error, /ERR_BLOCKED_BY_CLIENT/);
 
     const snapshot = await until(async () => {
-      const ledger = await panel.evaluate(() => window.sable.getLedger());
+      const ledger = await panel.evaluate(() => window.nyacord.getLedger());
       return ledger.recent.some((entry) => entry.category === "telemetry") ? ledger : null;
     });
     assert.ok((snapshot.totals.telemetry ?? 0) > 0);
@@ -301,7 +304,7 @@ describe("proxy", () => {
       bypass: "",
     };
     const stored = await panel.evaluate(
-      ([id, proxy]) => window.sable.setProfileProxy(id as string, proxy as ProxyConfig),
+      ([id, proxy]) => window.nyacord.setProfileProxy(id as string, proxy as ProxyConfig),
       [active.id, requested] as const,
     );
     assert.equal(stored?.mode, "manual");
@@ -322,7 +325,7 @@ describe("proxy", () => {
 
     const stored = await panel.evaluate(
       (id) =>
-        window.sable.setProfileProxy(id as string, {
+        window.nyacord.setProfileProxy(id as string, {
           mode: "manual",
           rules: "socks5://host:99999",
           pacUrl: "",

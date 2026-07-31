@@ -4,7 +4,7 @@ import type { AppShell } from "./window";
 
 /**
  * The application menu doubles as the keyboard-shortcut table. Shortcuts are
- * registered here rather than as global accelerators so that Sable never
+ * registered here rather than as global accelerators so that Nyacord never
  * captures keys while another application is focused.
  */
 export function buildMenu(shell: AppShell): void {
@@ -15,7 +15,7 @@ export function buildMenu(shell: AppShell): void {
       ? ([{ role: "appMenu" }] satisfies MenuItemConstructorOptions[])
       : []),
     {
-      label: "&Sable",
+      label: "&Nyacord",
       submenu: [
         {
           label: "Profiles…",
@@ -77,7 +77,7 @@ export function buildMenu(shell: AppShell): void {
     {
       label: "&Help",
       submenu: [
-        { label: "About Sable", click: () => shell.openPanel("about") },
+        { label: "About Nyacord", click: () => shell.openPanel("about") },
         { label: `Version ${app.getVersion()}`, enabled: false },
       ],
     },

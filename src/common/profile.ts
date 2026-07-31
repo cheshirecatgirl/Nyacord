@@ -50,7 +50,7 @@ export interface ProfileSummary {
  */
 export function partitionFor(profile: Pick<Profile, "id" | "ephemeral">): string {
   const safe = profile.id.replace(/[^a-zA-Z0-9_-]/g, "");
-  return profile.ephemeral ? `sable-eph-${safe}` : `persist:sable-${safe}`;
+  return profile.ephemeral ? `nyacord-eph-${safe}` : `persist:nyacord-${safe}`;
 }
 
 export function newProfileId(random: () => string): string {

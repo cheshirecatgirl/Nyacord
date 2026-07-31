@@ -24,9 +24,10 @@ Honest status. What exists, what does not, and what will never exist.
   survive, and quitting stays explicit
 - Settings panel with a grouped sidebar: Profiles, Privacy &amp; Security,
   Network, Inspector, Appearance, About
-- Unified/Classic layout setting with live in-panel previews, plus chat folders
+- Unified/Classic layout setting with live in-panel previews, a folder switcher
+  with a remembered active tab, plus chat folders
   (see below for exactly how far this goes)
-- 76 unit tests over the pure policy, rule, network and appearance modules
+- 82 unit tests over the pure policy, rule, network and appearance modules
 - 20 end-to-end tests that launch the real app, committed and wired into CI
 
 The end-to-end suite is the one that matters for regressions: it asserts the
@@ -40,15 +41,29 @@ panel loads with no page errors or CSP violations.
 
 ## The unified layout: what is shipped and what is blocked
 
-The `unified` layout is the merged, Telegram-style navigation: one column where
-Direct Messages and Servers are folders in the same list, a server reads like a
-DM until it is expanded, and custom folders sit below both.
+The `unified` layout is the merged, Telegram-style navigation: a small folder
+switcher along the top of the chat column, and below it one list showing only
+the active folder. DMs and Servers are the first two tabs, your own folders
+follow, and a server row reads exactly like a DM row — icon, title, one line —
+until you open it.
+
+The switcher is the design. Stacking Direct Messages and Servers on top of each
+other in a single scroll would be two lists sharing a container: more scrolling,
+and no clearer sense of where you are. One list at a time, with a one-click
+switch and a remembered active tab, keeps the column short and the current
+context obvious.
+
+None of this touches Discord. It is a rearrangement of navigation inside our own
+window — the same category of change as choosing a different window layout — and
+it involves no injected script, no patched client and no API call. Nothing about
+this layout changes the Terms position described in `docs/RESEARCH.md`.
 
 **Shipped:** the setting itself (`unified` default, `classic` fallback), the
-folder model with tones, ordering and remembered collapse state, folder entries
-validated to Discord channel paths, and navigation — clicking an entry moves the
-active profile to that chat. Entries store a *path*, not a URL, so one folder
-works on Stable, PTB and Canary alike.
+switcher with built-in DMs/Servers tabs plus user folders, a remembered active
+tab that survives restarts, the folder model with tones and ordering, folder
+entries validated to Discord channel paths, and navigation — clicking an entry
+moves the active profile to that chat. Entries store a *path*, not a URL, so one
+folder works on Stable, PTB and Canary alike.
 
 **Blocked:** automatically populating the list with *your* actual DMs and
 servers. Rendering the merged column is easy; knowing what belongs in it is not.
@@ -134,7 +149,7 @@ scraping, anything that makes your token behave like automation. The risk lands
 on the user's account.
 
 **Message logging and anti-delete.** Storing other people's deleted messages is
-a privacy violation dressed up as a privacy feature. Sable is a client that
+a privacy violation dressed up as a privacy feature. Nyacord is a client that
 avoids collecting data about you; it will not start collecting data about the
 people you talk to.
 

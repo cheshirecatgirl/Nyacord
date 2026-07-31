@@ -1,7 +1,7 @@
 # Research: the Discord client landscape
 
 Notes taken before writing any code, and the conclusions drawn from them. This
-is the "why Sable looks like this" document.
+is the "why Nyacord looks like this" document.
 
 ## The three families of Discord client
 
@@ -71,7 +71,7 @@ are the difference between a wrapper and a client people use.
 
 First, *portability done properly*: a data directory beside the executable, and
 the machine is otherwise untouched. Most Electron apps treat portability as a
-packaging format; Telegram treats it as a storage rule. Sable copies the rule,
+packaging format; Telegram treats it as a storage rule. Nyacord copies the rule,
 not the packaging.
 
 Second, *Ghost Mode*: the recognition that the most valuable privacy control in
@@ -124,7 +124,7 @@ Discord has publicly discouraged third-party clients. Enforcement in practice
 has focused on automation and self-botting rather than on people browsing
 Discord in a browser.
 
-Sable's position, stated plainly so users can make their own call:
+Nyacord's position, stated plainly so users can make their own call:
 
 - It loads Discord's own web application, unmodified, over HTTPS.
 - It injects no JavaScript into that application.

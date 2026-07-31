@@ -34,7 +34,7 @@ export class JsonStore<T extends object> {
       } catch {
         /* best effort; the point is not to lose the user's data silently */
       }
-      console.error(`[sable] config unreadable (${String(error)}); kept a copy at ${backup}`);
+      console.error(`[nyacord] config unreadable (${String(error)}); kept a copy at ${backup}`);
       return this.defaults();
     }
   }
@@ -70,7 +70,7 @@ export class JsonStore<T extends object> {
       writeFileSync(tmp, JSON.stringify(this.data, null, 2), { encoding: "utf8", mode: 0o600 });
       renameSync(tmp, this.file);
     } catch (error) {
-      console.error("[sable] failed to persist config:", error);
+      console.error("[nyacord] failed to persist config:", error);
     }
   }
 }
