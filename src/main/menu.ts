@@ -4,7 +4,7 @@ import type { AppShell } from "./window";
 
 /**
  * The application menu doubles as the keyboard-shortcut table. Shortcuts are
- * registered here rather than as global accelerators so that Nyacord never
+ * registered here, not as global accelerators, so Nyacord never
  * captures keys while another application is focused.
  */
 export function buildMenu(shell: AppShell): void {

@@ -4,89 +4,80 @@
 
 # Nyacord
 
-**A hardened, portable, multi-channel desktop client for Discord.**
-
-Stable, PTB and Canary · real session isolation · privacy you can audit
+**A hardened, portable Discord client for Stable, PTB and Canary.**
 
 </div>
 
 ---
 
-Nyacord is a purpose-built browser that loads Discord's own web application and
-enforces privacy and security policy from **outside** the page, where the page
-cannot see or subvert it.
+Nyacord is a purpose-built browser that loads Discord's web app and applies
+privacy and security policy from outside the page, where the page cannot see or
+change it.
 
-It does not patch Discord, inject scripts into it, or speak to the Discord API
-on your behalf. From Discord's side it is a browser session, because it is one.
+It does not patch Discord, inject scripts into it, or call the Discord API for
+you. From Discord's side it is a browser session, because it is one.
 
-> **Status:** early. The architecture, privacy engine, profile system and
-> hardening are implemented and tested. See [the roadmap](docs/ROADMAP.md) for
-> what is not built yet.
+> **Status:** early. The architecture, privacy engine, profiles and hardening
+> work and are tested. [ROADMAP.md](docs/ROADMAP.md) lists what is missing.
 
-## Why this exists
+## Why
 
-Most third-party Discord clients pick one of two paths: reimplement the API
-(which is what anti-abuse systems are built to catch), or inject plugins into
-the official client (which runs arbitrary third-party JavaScript inside the
-origin holding your session token). Both are reasonable engineering; neither is
-a good foundation for a client whose headline claim is privacy.
+Third-party Discord clients usually take one of two routes. They reimplement the
+API, which is the pattern anti-abuse systems look for, or they inject plugins
+into the official client, which runs third-party JavaScript inside the origin
+holding your session token. Both are fine engineering. Neither is a good base
+for a client whose main claim is privacy.
 
-Nyacord takes the third path — the hardened shell — and pushes it further than a
-wrapper usually goes: genuine per-profile session isolation, Telegram-style
-portability, a policy engine you can unit-test, and a live inspector that shows
-you what was blocked instead of asking you to trust a feature list.
+Nyacord takes the third route, the hardened shell, and goes further with it than
+a wrapper normally does: per-profile session isolation, Telegram-style
+portability, a policy engine covered by unit tests, and an inspector that shows
+what was blocked.
 
-Full reasoning, including what the reference implementations get right, is in
-[docs/RESEARCH.md](docs/RESEARCH.md).
+[docs/RESEARCH.md](docs/RESEARCH.md) has the full comparison.
 
 ## What you get
 
-**All three release channels, side by side.** Stable, PTB and Canary are
-separate origins with separate sessions, so run them at once, signed into
-different accounts, colour-coded so you always know which build you are in.
+**Three release channels at once.** Stable, PTB and Canary are separate origins
+with separate sessions. Run them side by side, signed into different accounts,
+colour-coded so you know which build you are looking at.
 
-**Profiles that are actually isolated.** Each profile owns a Chromium session
-partition — its own cookies, storage, cache and service workers. Two profiles
-cannot observe each other. Ephemeral profiles vanish completely on close.
+**Profiles that are really isolated.** Each profile owns a Chromium session
+partition: its own cookies, storage, cache and service workers. Two profiles
+cannot see each other. Ephemeral profiles disappear on close.
 
-**Ghost Mode.** Never send a typing indicator. Never acknowledge a read. Never
-upload a call quality report. Implemented by dropping requests at the network
-layer, not by patching the page — with the side effects documented honestly
-rather than glossed over.
+**Ghost Mode.** No typing indicators, no read acknowledgements, no call quality
+uploads. Done by dropping requests at the network layer, not by patching the
+page. The side effects are written down in [PRIVACY.md](docs/PRIVACY.md).
 
-**Privacy you can check.** Every block is listed live in the Privacy Inspector
-with its category, method and full URL. The classifier is a single pure module
-covered by unit tests, so "we block telemetry" is a claim you can run.
+**A privacy inspector.** Every blocked request is listed live with its category,
+method and URL. The classifier is one pure module with unit tests over it.
 
-**Per-profile egress.** A proxy is a session-level setting in Chromium, which
-makes a profile the right granularity: route one identity over Tor or a VPN and
-leave another direct. Plus DNS-over-HTTPS, so your network operator does not get
-a plaintext list of every host you contact.
+**Per-profile egress.** Chromium attaches proxies to sessions, so a profile is
+the right unit: send one identity over Tor or a VPN and leave another direct.
+DNS-over-HTTPS keeps your network operator from seeing a plaintext list of the
+hosts you contact.
 
-**A layout that merges DMs and servers.** `Unified` (the default) puts a small
-folder switcher above one chat list, Telegram-style: DMs, Servers and your own
-folders are tabs in the same strip, a server row reads like a DM row until you
-open it, and the active tab is remembered across restarts. One list at a time,
-so the column stays short and you always know where you are. `Classic` restores
-Discord's own arrangement. This is a rearrangement of our own window — no
-injected script, no patched client. Read
-[how far this goes](docs/ROADMAP.md#the-unified-layout-what-is-shipped-and-what-is-blocked)
-before expecting it to list your whole account — it is a curated launcher, not a
-mirror, and the reason why is a deliberate trade.
+**A merged DM and server list.** `Unified` (the default) puts a folder switcher
+above one chat list, the way Telegram does. DMs, Servers and your own folders
+share the strip, a server row looks like a DM row until you open it, and the
+active tab survives a restart. `Classic` gives you Discord's normal layout. All
+of this rearranges our own window; nothing is injected into Discord. See
+[what it does and does not do](docs/ROADMAP.md#the-unified-layout-what-is-shipped-and-what-is-blocked)
+before expecting it to list your whole account.
 
-**Portable like Telegram.** Put a `nyacord-data` directory next to the
-executable and Nyacord keeps everything there and touches nothing else.
+**Portable.** Drop a `nyacord-data` directory next to the executable and
+everything lives there.
 
-**Zero runtime dependencies.** Every package in `node_modules` is a build-time
-tool. What reaches your machine is Electron and this repository.
+**No runtime dependencies.** Everything in `node_modules` is a build tool. What
+reaches your machine is Electron and this repository.
 
 <div align="center">
 
-<img src="docs/screenshots/privacy.png" width="620" alt="The privacy settings panel">
+<img src="docs/screenshots/appearance.png" width="640" alt="The appearance settings pane">
 
 </div>
 
-## Privacy at a glance
+## Privacy presets
 
 | | Balanced (default) | Strict | Paranoid |
 | --- | :---: | :---: | :---: |
@@ -99,48 +90,46 @@ tool. What reaches your machine is Electron and this repository.
 | WebRTC | default route only | default route only | no non-proxied UDP |
 | Permissions | ask / deny | ask / deny | ask everything |
 
-Proxy (per profile) and secure DNS are configured separately, in **Network** —
-they are network decisions that outlive a privacy preset, so changing preset
-never resets them.
+Proxy and secure DNS live in **Network** and are not part of a preset, so
+changing preset never resets them.
 
-Details, side effects, and an honest list of what Nyacord **cannot** do are in
-[docs/PRIVACY.md](docs/PRIVACY.md). The short version of the limits: presence
-and online status travel inside the gateway WebSocket and are not filterable
-without injecting code into the page, which this project deliberately refuses
-to do. Use Discord's own invisible status for that.
+[PRIVACY.md](docs/PRIVACY.md) covers the details, the side effects, and the
+things Nyacord cannot do. The main limit: presence and online status travel
+inside the gateway WebSocket, which a shell cannot filter without running code
+in the page. Use Discord's invisible status for that.
 
 ## Getting started
 
-Requires Node 20+.
+Needs Node 20 or newer.
 
 ```bash
 npm install
 npm start          # build and run
-npm test           # 82 unit tests over the pure policy/rule/network modules
-npm run test:e2e   # 20 end-to-end tests that launch the real app
+npm test           # 82 unit tests over the pure modules
+npm run test:e2e   # 20 end-to-end tests against the real app
 npm run dist       # package for the current platform
 ```
 
-`test:e2e` needs a display and a non-root user (Chromium's sandbox refuses to
-run as root). On a headless machine, prefix it with `xvfb-run -a`.
+`test:e2e` needs a display and a non-root user, since Chromium's sandbox will
+not run as root. On a headless box, prefix it with `xvfb-run -a`.
 
 ### Portable mode
 
-Any one of these puts all state in a directory beside the executable:
+Any of these keeps all state next to the executable:
 
 ```bash
-mkdir nyacord-data          # a marker directory is enough
+mkdir nyacord-data          # the directory alone is enough
 ./nyacord --portable
 NYACORD_PORTABLE=1 ./nyacord
 ./nyacord --data-dir=/mnt/usb/nyacord
 ```
 
 The single-instance lock is keyed on the data directory, so two portable copies
-in two folders run side by side while a second launch of the same copy just
+in two folders run side by side, while launching the same copy twice just
 focuses the window you already have.
 
-If the portable directory turns out to be read-only, Nyacord falls back to the OS
-location and tells you in **About** rather than silently failing to persist.
+If the portable directory turns out to be read-only, Nyacord falls back to the
+OS location and says so in **About**.
 
 ### Shortcuts
 
@@ -148,9 +137,9 @@ location and tells you in **About** rather than silently failing to persist.
 | --- | --- |
 | <kbd>Ctrl/Cmd</kbd>+<kbd>P</kbd> | Profiles |
 | <kbd>Ctrl/Cmd</kbd>+<kbd>,</kbd> | Privacy settings |
-| <kbd>Ctrl/Cmd</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd> | Network (proxy, DNS) |
-| <kbd>Ctrl/Cmd</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd> | Appearance (layout, folders) |
-| <kbd>Ctrl/Cmd</kbd>+<kbd>Shift</kbd>+<kbd>I</kbd> | Privacy Inspector |
+| <kbd>Ctrl/Cmd</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd> | Network |
+| <kbd>Ctrl/Cmd</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd> | Appearance |
+| <kbd>Ctrl/Cmd</kbd>+<kbd>Shift</kbd>+<kbd>I</kbd> | Inspector |
 | <kbd>Ctrl/Cmd</kbd>+<kbd>R</kbd> | Reload the Discord view |
 | <kbd>Esc</kbd> | Close the panel |
 
@@ -158,30 +147,29 @@ location and tells you in **About** rather than silently failing to persist.
 
 | | |
 | --- | --- |
-| [RESEARCH.md](docs/RESEARCH.md) | The client landscape, what Discord sends, and why this design |
+| [RESEARCH.md](docs/RESEARCH.md) | The client landscape, what Discord sends, why this design |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Process layout, module map, request pipeline |
-| [PRIVACY.md](docs/PRIVACY.md) | Exactly what is blocked, and what cannot be |
+| [PRIVACY.md](docs/PRIVACY.md) | What is blocked, and what cannot be |
 | [SECURITY.md](docs/SECURITY.md) | Threat model, hardening, fuses, IPC surface |
-| [ROADMAP.md](docs/ROADMAP.md) | What is not built yet, and what is out of scope forever |
+| [ROADMAP.md](docs/ROADMAP.md) | What is missing, and what is out of scope |
 
-## A word on Discord's Terms
+## Discord's Terms
 
 Discord's terms prohibit modifying the client, and Discord discourages
-third-party clients generally. Nyacord loads Discord's unmodified web app, injects
-nothing into it, and reimplements no API — it blocks some of its own outbound
-requests, the same category of action as running an ad blocker in Firefox.
+third-party clients in general. Nyacord loads the unmodified web app, injects
+nothing, and reimplements no API. It blocks some of its own outbound requests,
+which is the same class of action as running an ad blocker in Firefox.
 
-That is a materially different posture from a patched client, and it is the
-lowest-risk way to get real privacy control. It is not a guarantee, and anyone
-offering you one is not being straight with you. The trade-off is yours to
-make; see [docs/RESEARCH.md](docs/RESEARCH.md#terms-of-service) for the full
-reasoning.
+That is a different position from a patched client, and it is the lowest-risk
+way to get real privacy controls. It is not a guarantee and nobody can give you
+one. [docs/RESEARCH.md](docs/RESEARCH.md#terms-of-service) has the reasoning if
+you want to weigh it yourself.
 
 ## Not affiliated with Discord
 
-Nyacord is an independent project. Discord is a trademark of Discord Inc., which
-has no involvement in this software.
+An independent project. Discord is a trademark of Discord Inc., which has no
+involvement in this software.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE).

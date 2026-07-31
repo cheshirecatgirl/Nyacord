@@ -7,8 +7,8 @@
  * the mismatch itself is a fingerprint.
  *
  * The goal is narrower and achievable: look like the stock Chromium build you
- * actually are, instead of announcing "Electron" and the product name — which
- * is a set of one.
+ * actually are, instead of announcing "Electron" and a product name that
+ * narrows you to a set of one.
  */
 
 /** Tokens Electron appends that no browser would ever send. */

@@ -6,17 +6,17 @@ import type { PrivacyPolicy } from "./policy";
  * A profile is the unit of isolation. It owns a Chromium session partition,
  * which means its own cookies, localStorage, IndexedDB, cache and service
  * workers. Two profiles cannot see each other, so "work account on Stable" and
- * "personal account on Canary" are genuinely separate identities rather than
- * two tabs that share a login.
+ * "personal account on Canary" are separate identities, not two tabs
+ * sharing a login.
  */
 export interface Profile {
   readonly id: string;
   name: string;
   channel: ChannelId;
   /**
-   * Ephemeral profiles use an in-memory partition. Everything — session,
-   * cache, storage — is gone when the profile is closed. This is the
-   * "log in on someone else's machine" mode.
+   * Ephemeral profiles use an in-memory partition, so session, cache and
+   * storage all vanish when the profile closes. Use it on a machine that is
+   * not yours.
    */
   ephemeral: boolean;
   /** Optional per-profile override; when absent the global policy applies. */
@@ -27,7 +27,7 @@ export interface Profile {
    * out over Tor or a VPN while another goes out directly.
    */
   proxy?: ProxyConfig;
-  /** Injected as a user stylesheet. CSS only — never script. See docs/SECURITY.md. */
+  /** Injected as a user stylesheet. CSS only, never script. See docs/SECURITY.md. */
   userCss?: string;
   createdAt: number;
   lastUsedAt: number;
@@ -50,7 +50,7 @@ export interface ProfileSummary {
  */
 export function partitionFor(profile: Pick<Profile, "id" | "ephemeral">): string {
   const safe = profile.id.replace(/[^a-zA-Z0-9_-]/g, "");
-  return profile.ephemeral ? `nyacord-eph-${safe}` : `persist:nyacord-${safe}`;
+  return profile.ephemeral ? `nya-eph-${safe}` : `persist:nya-${safe}`;
 }
 
 export function newProfileId(random: () => string): string {

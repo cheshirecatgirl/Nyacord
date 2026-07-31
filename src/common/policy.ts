@@ -1,8 +1,8 @@
 /**
  * The privacy policy is a single plain object. Everything the client does to
- * protect you — request filtering, permission answers, header rewriting,
- * WebRTC behaviour — is derived from it, so there is exactly one place to read
- * if you want to know what the client will actually do.
+ * protect you is derived from it: request filtering, permission answers,
+ * header rewriting, WebRTC behaviour. One place to read to know what the
+ * client will do.
  */
 
 export type PermissionDecision = "allow" | "ask" | "deny";
@@ -57,7 +57,7 @@ export interface GhostPolicy {
 export interface PrivacyPolicy {
   preset: PresetName;
 
-  /** The `science`, `track` and `metrics` API endpoints — Discord's own analytics pipeline. */
+  /** Discord's analytics pipeline: the `science`, `track` and `metrics` endpoints. */
   blockTelemetry: boolean;
   /** Sentry and Discord's crash/error ingestion endpoints. */
   blockErrorReporting: boolean;
@@ -198,7 +198,7 @@ export function presetPolicy(name: Exclude<PresetName, "custom">): PrivacyPolicy
 
 /**
  * Merges a stored (possibly stale or partial) policy onto a known-good base.
- * Unknown keys are dropped and malformed values fall back rather than throw,
+ * Unknown keys are dropped and malformed values fall back instead of throwing,
  * so a hand-edited or downgraded config file can never brick startup.
  */
 export function normalizePolicy(input: unknown): PrivacyPolicy {

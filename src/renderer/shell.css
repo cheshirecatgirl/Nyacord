@@ -302,11 +302,7 @@ select:focus-visible {
   border-color: var(--accent);
 }
 
-/*
- * Channel tints. Keyed on the channel id rather than set from JavaScript,
- * because the panel's CSP forbids inline styles — and presentation belongs
- * here anyway.
- */
+/* Channel tints, keyed on the channel id. The CSP forbids inline styles. */
 .dot {
   width: 9px;
   height: 9px;
@@ -357,7 +353,7 @@ select:focus-visible {
   border-bottom: none;
 }
 
-/* A suppression whose master switch is off cannot do anything. */
+/* Suppressions do nothing while the master switch is off. */
 .toggle.inactive {
   opacity: 0.5;
 }
@@ -433,10 +429,7 @@ select:focus-visible {
   font-size: 12px;
 }
 
-/*
- * The preview is the real thing in miniature rather than a screenshot, so it
- * cannot drift out of date with the layout it advertises.
- */
+/* Miniature of the real layout, so it cannot drift from what ships. */
 .mock {
   display: flex;
   gap: 5px;
@@ -455,7 +448,7 @@ select:focus-visible {
   gap: 5px;
 }
 
-/* The switcher: one row of small pills, the active one filled. */
+/* One row of small pills, the active one filled. */
 .mock-switcher {
   display: flex;
   gap: 3px;
@@ -548,7 +541,7 @@ select:focus-visible {
   background: #3a3d46;
 }
 
-/* A server reads exactly like a DM until you open it — only the shape differs. */
+/* A server row matches a DM row apart from the avatar shape. */
 .mock-avatar.square {
   border-radius: 4px;
 }
@@ -593,10 +586,7 @@ select:focus-visible {
 
 /* --------------------------------------------------------------- switcher */
 
-/*
- * Deliberately understated: it sits above a chat list all day, so it reads as
- * a quiet strip rather than a second row of buttons competing with the list.
- */
+/* Kept quiet: it sits above the chat list all day. */
 .switcher {
   display: flex;
   flex-wrap: wrap;

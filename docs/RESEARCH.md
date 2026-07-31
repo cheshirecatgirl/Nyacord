@@ -6,8 +6,8 @@ is the "why Nyacord looks like this" document.
 ## The three families of Discord client
 
 Every third-party Discord client falls into one of three architectural
-families, and the choice determines almost everything else — risk profile,
-maintenance burden, and what privacy claims are even possible.
+families. The choice decides nearly everything downstream: risk profile,
+maintenance burden, and which privacy claims are even possible.
 
 ### 1. API reimplementation
 
@@ -17,15 +17,15 @@ token. Examples include terminal clients and the various "self-bot" libraries.
 - **Upside**: complete control, tiny resource footprint.
 - **Downside**: this is what Discord's anti-abuse systems are actually built to
   detect. A user token driving non-official request patterns is the textbook
-  self-bot signature. It is also a permanent treadmill — undocumented endpoints
-  change without notice.
+  self-bot signature, and it is a permanent treadmill, since undocumented
+  endpoints change without notice.
 - **Verdict for us**: rejected. The risk lands on the user's account, not on
   the developer, which makes it an unfair trade to ship by default.
 
 ### 2. Injection into the official client
 
-The official Electron app is patched at runtime — `asar` replacement, a
-preload shim, or a loader that pulls plugins into Discord's own renderer.
+The official Electron app is patched at runtime: `asar` replacement, a preload
+shim, or a loader that pulls plugins into Discord's own renderer.
 BetterDiscord, Vencord, Equicord and shelter all live here, as do the
 distributions that bundle them (Vesktop, Legcord).
 
@@ -33,9 +33,8 @@ distributions that bundle them (Vesktop, Legcord).
   components, anything the page can reach.
 - **Downside**: this is precisely what Discord's terms describe when they
   prohibit modifying the client. It also means arbitrary third-party JavaScript
-  runs *inside the origin that holds your session token* — a malicious or
-  compromised plugin has full account access, and there is no boundary left to
-  enforce.
+  runs *inside the origin that holds your session token*. A malicious or
+  compromised plugin has full account access, with no boundary left to enforce.
 - **Verdict for us**: rejected as an architecture. A client whose headline
   claim is privacy and security cannot also be a general-purpose script
   injection host for the same origin that holds the token.
@@ -43,8 +42,8 @@ distributions that bundle them (Vesktop, Legcord).
 ### 3. Hardened browser shell
 
 The client is a purpose-built browser that loads Discord's own web app,
-unmodified, and enforces policy from *outside* the page — at the network layer,
-the permission layer and the navigation layer. WebCord is the reference
+unmodified, and enforces policy from *outside* the page: at the network,
+permission and navigation layers. WebCord is the reference
 implementation of this idea.
 
 - **Upside**: from Discord's perspective the traffic is a browser session,
@@ -58,16 +57,15 @@ implementation of this idea.
 
 ## What the reference implementations get right
 
-**WebCord** — the shell model itself, the insight that user-agent sanitization
+**WebCord.** The shell model itself, the insight that user-agent sanitization
 matters (an `Electron/x.y.z` token is a set of one), and treating
-"stay inside the Terms of Service" as a design constraint rather than an
-afterthought.
+"stay inside the Terms of Service" as a design constraint from the start.
 
-**Vesktop / Legcord** — that the desktop experience is the point. A tray, real
+**Vesktop and Legcord.** That the desktop experience is the point. A tray, real
 notifications, background operation, and Linux screenshare that actually works
 are the difference between a wrapper and a client people use.
 
-**Telegram Desktop and AyuGram** — two things.
+**Telegram Desktop and AyuGram.** Two things.
 
 First, *portability done properly*: a data directory beside the executable, and
 the machine is otherwise untouched. Most Electron apps treat portability as a
@@ -75,8 +73,8 @@ packaging format; Telegram treats it as a storage rule. Nyacord copies the rule,
 not the packaging.
 
 Second, *Ghost Mode*: the recognition that the most valuable privacy control in
-a chat client is not encryption, it is not broadcasting your behaviour —
-typing indicators, read receipts, online status. AyuGram implements this by
+a chat client is not encryption. It is not broadcasting your behaviour: typing
+indicators, read receipts, online status. AyuGram implements this by
 forking the client. We implement the network-observable parts of it by dropping
 requests, which turns out to be enough for typing and read receipts and
 explicitly not enough for presence (see `docs/PRIVACY.md`).
@@ -87,16 +85,16 @@ The surfaces worth knowing about, and how each is addressed:
 
 | Surface | Mechanism | Can a shell block it? |
 | --- | --- | --- |
-| `POST /api/v*/science` | Batched analytics events | Yes — plain HTTP |
-| Sentry ingest | Crash and error reports | Yes — plain HTTP |
-| `POST /channels/{id}/typing` | Typing indicator | Yes — plain HTTP |
-| Message acks | Read receipts | Yes — plain HTTP |
-| Call quality reports | Post-call telemetry | Yes — plain HTTP |
+| `POST /api/v*/science` | Batched analytics events | Yes: plain HTTP |
+| Sentry ingest | Crash and error reports | Yes: plain HTTP |
+| `POST /channels/{id}/typing` | Typing indicator | Yes: plain HTTP |
+| Message acks | Read receipts | Yes: plain HTTP |
+| Call quality reports | Post-call telemetry | Yes: plain HTTP |
 | `X-Super-Properties` | Base64 client metadata: OS, locale, build number, release channel | Yes, but see below |
 | `X-Fingerprint` | Opaque device fingerprint issued by Discord | Only by breaking the client |
-| Presence / status | Gateway WebSocket frames | **No** — see below |
-| Embedded activities | Third-party code on `*.discordsays.com` | Yes — block the host |
-| WebRTC ICE candidates | Can reveal LAN addresses to peers | Yes — Chromium policy |
+| Presence / status | Gateway WebSocket frames | **No**: see below |
+| Embedded activities | Third-party code on `*.discordsays.com` | Yes: block the host |
+| WebRTC ICE candidates | Can reveal LAN addresses to peers | Yes: Chromium policy |
 
 Two deliberate non-decisions:
 
@@ -112,16 +110,15 @@ things and only the first is defensible.
 **Gateway frames are not filtered.** Presence updates, typing receipt *reads*,
 and most real-time state travel as frames inside a single WebSocket. Filtering
 them requires either a man-in-the-middle on the connection or code inside the
-page — and code inside the page is the architecture we rejected in family 2.
-So Ghost Mode covers what HTTP can cover, and the invisible-status feature
-Discord already ships covers the rest. Claiming otherwise would be the kind of
-privacy theatre this project exists to avoid.
+page, which is the architecture rejected in family 2. So Ghost Mode covers what
+HTTP can cover and Discord's own invisible status covers the rest. Claiming
+otherwise would be theatre.
 
 ## Terms of Service
 
 Discord's terms prohibit modifying the client and reverse-engineering it, and
 Discord has publicly discouraged third-party clients. Enforcement in practice
-has focused on automation and self-botting rather than on people browsing
+has focused on automation and self-botting, not on people browsing
 Discord in a browser.
 
 Nyacord's position, stated plainly so users can make their own call:
@@ -129,8 +126,8 @@ Nyacord's position, stated plainly so users can make their own call:
 - It loads Discord's own web application, unmodified, over HTTPS.
 - It injects no JavaScript into that application.
 - It reimplements no API and calls no undocumented endpoint.
-- It blocks some of its *own* outbound requests — the same category of action
-  as running an ad blocker or denying a permission prompt in Firefox.
+- It blocks some of its *own* outbound requests, the same class of action as
+  running an ad blocker or denying a permission prompt in Firefox.
 
 That is a materially different posture from a patched client, and it is the
 lowest-risk option that still delivers real privacy control. It is not a

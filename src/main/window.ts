@@ -5,7 +5,7 @@ import { CHANNELS } from "../common/channels";
 import { IPC, type AppState, type PaneId } from "../common/ipc";
 import type { PermissionKey } from "../common/policy";
 import { parseBadgeFromTitle, type Profile, type ProfileSummary } from "../common/profile";
-import type { NyacordConfig } from "./config";
+import type { NyaConfig } from "./config";
 import type { ProfileStore } from "./profiles";
 import type { PrivacyLedger } from "./privacy/ledger";
 import { ViewWatchdog } from "./reliability/watchdog";
@@ -66,7 +66,7 @@ export class AppShell {
   private allowClose = false;
 
   constructor(
-    private readonly config: JsonStore<NyacordConfig>,
+    private readonly config: JsonStore<NyaConfig>,
     private readonly profiles: ProfileStore,
     private readonly ledger: PrivacyLedger,
     private readonly info: RuntimeInfo,
@@ -90,13 +90,13 @@ export class AppShell {
     this.window.on("maximize", () => this.layout());
     this.window.on("unmaximize", () => this.layout());
     /**
-     * Close hides rather than destroys, the way every messenger behaves: the
+     * Close hides instead of destroying, the way every messenger behaves: the
      * gateway connection stays up so notifications keep arriving, and there is
      * still a window to re-show when the user clicks the tray or docks icon.
      *
-     * Destroying it here was a bug on two counts — `activate` would try to
-     * focus a destroyed window, and with no tray there was no route back.
-     * Quitting is explicit, and `allowClose` is what makes it possible.
+     * Destroying it here was a bug twice over: `activate` would focus a
+     * destroyed window, and with no tray there was no route back. Quitting is
+     * explicit, and `allowClose` is what lets it through.
      */
     this.window.on("close", (event) => {
       this.persistBounds();
@@ -151,7 +151,7 @@ export class AppShell {
       this.window.contentView.addChildView(this.shell);
     }
     this.layout();
-    this.window.setTitle(`${profile.name} — ${CHANNELS[profile.channel].label}`);
+    this.window.setTitle(`${profile.name} · ${CHANNELS[profile.channel].label}`);
     this.pushState();
   }
 
@@ -183,7 +183,7 @@ export class AppShell {
     containNavigation(view.webContents, channel);
 
     const watchdog = new ViewWatchdog(view, channel.appUrl, {
-      onDegraded: (cause) => console.warn(`[nyacord] ${profile.name}: ${cause}`),
+      onDegraded: (cause) => console.warn(`[nya] ${profile.name}: ${cause}`),
     });
 
     const entry: ProfileView = { profile, view, watchdog, badge: -1 };
@@ -220,7 +220,7 @@ export class AppShell {
    *
    * This is how a folder entry actually opens a chat, and it needs nothing
    * inside Discord's page: the web app is a normal SPA whose routes are URLs,
-   * so a folder is a set of destinations rather than a set of DOM handles. The
+   * so a folder is a set of destinations, not a set of DOM handles. The
    * path is resolved against the profile's own channel, so the same folder
    * works on Stable, PTB and Canary.
    */
@@ -255,9 +255,8 @@ export class AppShell {
 
   /**
    * Deletes a profile *and* its stored session. The confirmation the user sees
-   * promises both, so both have to happen — removing the config entry alone
-   * would leave a logged-in session on disk under a partition nothing points
-   * at any more.
+   * promises both, so both have to happen. Removing the config entry alone
+   * leaves a logged-in session on disk under a partition nothing points at.
    */
   async deleteProfile(id: string): Promise<void> {
     if (!this.profiles.find(id)) return;
@@ -273,7 +272,7 @@ export class AppShell {
   /**
    * Applies a proxy to a live session and reloads the view, because a change
    * of egress mid-session is exactly the moment the user wants every
-   * connection re-established rather than a mix of old and new.
+   * connection re-established, not a mix of old and new.
    */
   async setProfileProxy(id: string, input: unknown): Promise<ProxyConfig> {
     const proxy = this.profiles.setProxy(id, input);
@@ -348,7 +347,7 @@ export class AppShell {
         preload: join(__dirname, "..", "preload", "shell.js"),
         // The panel is our own local UI; it never loads remote content, so it
         // gets a dedicated in-memory partition with no cookies at all.
-        partition: "nyacord-shell",
+        partition: "nya-shell",
       },
     });
 
@@ -417,7 +416,7 @@ export class AppShell {
   // ------------------------------------------------------------ permissions
 
   /**
-   * "Ask" permissions surface as a native modal rather than a page-drawn one,
+   * "Ask" permissions surface as a native modal, not a page-drawn one,
    * so a compromised renderer cannot fake the dialog or click it for you.
    */
   private async askPermission(

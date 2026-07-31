@@ -7,12 +7,12 @@ Who we are defending against, in rough order of likelihood.
 | Adversary | Capability | Nyacord's answer |
 | --- | --- | --- |
 | A malicious link or embed | Runs script in Discord's origin | Sandboxed renderer, no preload, no bridge to reach |
-| A hostile web page after navigation | Full page control | Navigation containment — the view cannot leave the channel host |
+| A hostile web page after navigation | Full page control | Navigation containment: the view cannot leave the channel host |
 | A third-party embedded activity | Runs code in an iframe | Blocked from `strict` up; refused all permissions regardless |
 | A renderer exploit chain | Arbitrary code in the renderer | Chromium sandbox + no Node in renderer + fuses |
 | Local malware without root | Reads app data, drops files next to the binary | Cookie encryption, ASAR integrity, `OnlyLoadAppFromAsar` |
 | Someone with your unlocked machine | Everything | Out of scope. Use disk encryption and ephemeral profiles. |
-| Discord itself | Sees your traffic | Out of scope — see `docs/PRIVACY.md` |
+| Discord itself | Sees your traffic | Out of scope: see `docs/PRIVACY.md` |
 
 ## Renderer hardening
 
@@ -27,10 +27,10 @@ experimentalFeatures: false       navigateOnDragDrop: false
 ```
 
 `app.enableSandbox()` is called before ready, so the sandbox is the process-wide
-default rather than something each window has to remember.
+default, not something each window has to remember.
 
 `backgroundThrottling` is deliberately **false**. It is the one setting here
-chosen for behaviour rather than security: throttling the renderer breaks
+chosen for behaviour, not security: throttling the renderer breaks
 notification delivery and voice keepalives when the window is not focused, and
 a chat client that silently stops delivering messages when minimized is not a
 chat client.
@@ -44,13 +44,13 @@ reviewable as a diff.
 
 Every handler in `src/main/ipc.ts` treats its argument as hostile: channel ids
 are checked against a known set, policies go through `normalizePolicy`, and
-profile ids are looked up rather than trusted. The shell renderer is ours and
+profile ids are looked up, not trusted. The shell renderer is ours and
 is sandboxed, but "the privileged side validates" is the only assumption that
 survives a renderer compromise.
 
-Listeners receive only the payload — the `IpcRendererEvent` is withheld,
-because it carries `sender`, which would hand the renderer a route back into
-the main process.
+Listeners receive only the payload. The `IpcRendererEvent` is withheld because
+it carries `sender`, which would hand the renderer a route back into the main
+process.
 
 **The Discord view has no preload and therefore cannot reach any of this.**
 
@@ -74,11 +74,11 @@ match `discord.com`. This is tested.
 `config.json` may be hand-edited, half-written by an older build, or restored
 from another machine. It is re-validated on load, not cast:
 
-- Unknown keys are dropped; malformed values fall back rather than throw.
+- Unknown keys are dropped; malformed values fall back instead of throwing.
 - Profile ids must match `^[a-zA-Z0-9_-]{1,32}$`.
 - Session partitions are *derived* from the id, never read from disk.
-- A corrupted file is copied aside and startup continues with defaults —
-  losing your window position is acceptable, refusing to launch is not.
+- A corrupted file is copied aside and startup continues with defaults. Losing
+  a window position is acceptable; refusing to launch is not.
 
 Writes are atomic (temp file plus rename) and the file is created `0600`.
 
@@ -107,12 +107,12 @@ cookies. It cannot navigate anywhere.
 
 The renderer builds all DOM with `createElement` and `textContent`. There is no
 `innerHTML` in the codebase, which matters because the Privacy Inspector
-displays URLs that came off the network — they must be inert text, and they are.
+displays URLs pulled off the network, which have to stay inert text.
 
 There are also no inline styles and no `style` attributes: `style-src 'self'`
-is enforced with no `'unsafe-inline'`, so all presentation — including the
-per-channel accent colours — lives in the stylesheet. The panel loads with zero
-CSP violations, which is the point of setting a policy you actually comply with.
+is enforced with no `'unsafe-inline'`, so all presentation lives in the
+stylesheet, including the per-channel accent colours. The panel loads with no
+CSP violations.
 
 ## macOS entitlements
 
@@ -123,5 +123,5 @@ client. Notably absent are `apple-events` and
 
 ## Reporting a vulnerability
 
-Open a private security advisory on the repository rather than a public issue.
+Open a private security advisory on the repository, not a public issue.
 Include the version, platform, and the smallest reproduction you can manage.

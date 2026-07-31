@@ -5,7 +5,7 @@ import { CHANNELS } from "../common/channels";
 import type { AppShell } from "./window";
 
 /**
- * The tray is what makes the client feel like a messenger rather than a web
+ * The tray is what makes the client feel like a messenger instead of a web
  * page: closing the window keeps you connected, and the unread count is
  * visible without switching to it.
  */
@@ -18,7 +18,7 @@ export class AppTray {
   create(): void {
     const icon = nativeImage.createFromPath(join(__dirname, "..", "..", "..", "assets", "tray.png"));
     if (icon.isEmpty()) {
-      console.warn("[nyacord] tray icon missing; running without a tray");
+      console.warn("[nya] tray icon missing; running without a tray");
       return;
     }
     // macOS renders the tray icon as a template so it follows the menu bar theme.
@@ -50,7 +50,7 @@ export class AppTray {
     if (signature === this.signature) return;
     this.signature = signature;
 
-    this.tray.setToolTip(total > 0 ? `Nyacord — ${total} unread` : "Nyacord");
+    this.tray.setToolTip(total > 0 ? `Nyacord · ${total} unread` : "Nyacord");
 
     this.tray.setContextMenu(
       Menu.buildFromTemplate([
@@ -72,7 +72,7 @@ export class AppTray {
         { label: "Privacy…", click: () => this.shell.openPanel("privacy") },
         { type: "separator" },
         // `quit`, not `exit`: `exit` skips `before-quit`, which is where the
-        // config is flushed — quitting from the tray would silently discard
+        // config is flushed. Quitting from the tray would otherwise discard
         // any setting changed since the last debounced write.
         { label: "Quit", click: () => app.quit() },
       ]),

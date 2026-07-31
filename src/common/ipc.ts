@@ -3,11 +3,10 @@
  * UI renderer.
  *
  * Every channel is listed here and nowhere else. The preload exposes exactly
- * these and nothing generic — no `invoke(anyChannel, …)` escape hatch — so the
- * attack surface reachable from renderer JavaScript is bounded by this file.
+ * these and nothing generic. There is no `invoke(anyChannel, …)` escape hatch,
+ * so this file bounds what renderer JavaScript can reach.
  *
- * Note that the Discord view has *no* preload at all and therefore cannot
- * reach any of this.
+ * The Discord view has no preload at all, so it cannot reach any of this.
  */
 
 import type { AppearanceConfig } from "./appearance";
@@ -18,27 +17,27 @@ import type { ProfileSummary } from "./profile";
 import type { RuleCategory } from "./rules";
 
 export const IPC = {
-  getState: "nyacord:get-state",
-  setPolicy: "nyacord:set-policy",
-  applyPreset: "nyacord:apply-preset",
-  createProfile: "nyacord:create-profile",
-  switchProfile: "nyacord:switch-profile",
-  renameProfile: "nyacord:rename-profile",
-  deleteProfile: "nyacord:delete-profile",
-  clearProfileData: "nyacord:clear-profile-data",
-  setProfileProxy: "nyacord:set-profile-proxy",
-  setDns: "nyacord:set-dns",
-  setAppearance: "nyacord:set-appearance",
-  openChat: "nyacord:open-chat",
-  getLedger: "nyacord:get-ledger",
-  clearLedger: "nyacord:clear-ledger",
-  closePanel: "nyacord:close-panel",
-  reloadActive: "nyacord:reload-active",
-  openExternal: "nyacord:open-external",
+  getState: "nya:get-state",
+  setPolicy: "nya:set-policy",
+  applyPreset: "nya:apply-preset",
+  createProfile: "nya:create-profile",
+  switchProfile: "nya:switch-profile",
+  renameProfile: "nya:rename-profile",
+  deleteProfile: "nya:delete-profile",
+  clearProfileData: "nya:clear-profile-data",
+  setProfileProxy: "nya:set-profile-proxy",
+  setDns: "nya:set-dns",
+  setAppearance: "nya:set-appearance",
+  openChat: "nya:open-chat",
+  getLedger: "nya:get-ledger",
+  clearLedger: "nya:clear-ledger",
+  closePanel: "nya:close-panel",
+  reloadActive: "nya:reload-active",
+  openExternal: "nya:open-external",
   // main -> renderer
-  stateChanged: "nyacord:state-changed",
-  ledgerChanged: "nyacord:ledger-changed",
-  showPane: "nyacord:show-pane",
+  stateChanged: "nya:state-changed",
+  ledgerChanged: "nya:ledger-changed",
+  showPane: "nya:show-pane",
 } as const;
 
 export type PaneId =

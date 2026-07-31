@@ -2,16 +2,15 @@
  * Appearance: how the client arranges itself, as opposed to what it blocks.
  *
  * The headline setting is the navigation layout. `classic` is Discord's own
- * arrangement — a narrow rail of server icons on the far left, a separate
- * channel/DM column beside it. `unified` is a single column in the Telegram
- * idiom: a small folder switcher along the top, and below it one list showing
- * only the active folder, where a server reads exactly like a DM (icon, title,
- * one line) until you open it.
+ * arrangement: a narrow rail of server icons on the far left and a separate
+ * channel/DM column beside it. `unified` follows Telegram instead. A folder
+ * switcher runs along the top and one list sits below it, showing the active
+ * folder only. In that list a server looks like a DM (icon, title, one line)
+ * until you open it.
  *
  * The switcher is what makes this work. Stacking Direct Messages and Servers
- * on top of each other in one scroll would just be two lists sharing a
- * container — more scrolling, not less. One list at a time with a one-click
- * switch keeps the column short and makes the current context obvious.
+ * in one scroll would be two lists in one container, so you would scroll more,
+ * not less. One folder at a time keeps the column short and the context clear.
  *
  * The naming is deliberate. "Modern" ages badly and says nothing; "legacy"
  * implies the other option is deprecated when it is a perfectly good layout
@@ -28,7 +27,7 @@ export function isLayoutMode(value: unknown): value is LayoutMode {
 }
 
 /**
- * Folder accents come from a fixed palette rather than a free colour field, so
+ * Folder accents come from a fixed palette, not a free colour field, so
  * the value maps to a stylesheet class. The panel forbids inline styles, and a
  * closed set keeps the UI coherent instead of letting it become a paintbox.
  */
@@ -43,9 +42,9 @@ export function isFolderTone(value: unknown): value is FolderTone {
 /**
  * One entry in a folder: a chat you want reachable from the merged list.
  *
- * `target` is a path within the Discord web app, never a full URL, so an entry
- * can never point off-platform and works across all three release channels —
- * the same folder is valid whether the profile is on Stable or Canary.
+ * `target` is a path within the Discord web app, never a full URL. An entry
+ * therefore cannot point off-platform, and the same folder is valid whether the
+ * profile is on Stable, PTB or Canary.
  */
 export interface ChatEntry {
   readonly id: string;
@@ -63,9 +62,9 @@ export interface ChatFolder {
 }
 
 /**
- * The two folders that always exist. They are not stored — a config file
- * cannot rename or delete them — and they always lead the switcher, so the
- * first two tabs are in the same place no matter how the rest is arranged.
+ * The two folders that always exist. They are not stored, so a config file
+ * cannot rename or delete them, and they always lead the switcher. The first
+ * two tabs stay put however the rest is arranged.
  */
 export const BUILTIN_FOLDERS = [
   { id: "dms", label: "DMs", tone: "violet" },
@@ -81,8 +80,8 @@ export function isReservedFolderId(id: string): boolean {
 export interface AppearanceConfig {
   layout: LayoutMode;
   /**
-   * User-defined folders, shown in the switcher after the two built-ins. Empty
-   * by default — nothing is invented on your behalf.
+   * User-defined folders, shown in the switcher after the two built-ins.
+   * Empty by default; nothing is invented on your behalf.
    */
   folders: ChatFolder[];
   /**
@@ -103,7 +102,7 @@ export interface FolderTab {
 
 /**
  * The switcher's contents: the two built-ins followed by the user's folders.
- * Derived rather than stored, so the tab strip can never disagree with the
+ * Derived, not stored, so the tab strip can never disagree with the
  * folder list it came from.
  */
 export function folderTabs(config: AppearanceConfig): FolderTab[] {
@@ -190,7 +189,7 @@ function cleanName(value: unknown, fallback: string, max: number): string {
 
 /**
  * Re-validates appearance config from disk or from the renderer. Entries whose
- * target does not survive normalization are dropped rather than kept in a
+ * target does not survive normalization are dropped instead of kept in a
  * broken state, and ids are de-duplicated so a hand-edited file cannot produce
  * two folders that the UI cannot tell apart.
  */
@@ -238,9 +237,9 @@ export function normalizeAppearance(input: unknown): AppearanceConfig {
     });
   }
 
-  // A remembered tab that no longer exists — because the folder was deleted,
-  // or the config came from another machine — falls back to the first built-in
-  // rather than leaving the switcher pointing at nothing.
+  // The remembered tab may be gone: folder deleted, or config copied from
+  // another machine. Fall back to the first built-in so the switcher always
+  // points at something.
   const requested = raw["activeFolder"];
   const known = new Set<string>([...RESERVED_FOLDER_IDS, ...folders.map((folder) => folder.id)]);
   const activeFolder = typeof requested === "string" && known.has(requested) ? requested : "dms";

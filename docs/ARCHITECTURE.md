@@ -18,7 +18,7 @@ main process  ── privileged. Owns config, policy, sessions, filtering.
 ```
 
 Only one profile view is attached to the window at a time; switching profiles
-swaps which child view is mounted rather than reloading anything, so background
+swaps which child view is mounted instead of reloading anything, so background
 profiles keep their gateway connection and unread state.
 
 The shell view is added on top when the panel opens and removed when it closes.
@@ -29,20 +29,19 @@ It is transparent, so Discord stays visible behind it.
 Nothing of ours runs inside Discord's page. There is no `contextBridge`, no
 injected script, no IPC channel reachable from that renderer.
 
-This is the single most important decision in the codebase and it buys three
-things at once:
+This is the decision the rest of the design hangs off. It buys three things:
 
-1. **Security.** A renderer compromise — a malicious embed, a Chromium 0-day —
-   finds no bridge to the main process, because there is not one.
+1. **Security.** A renderer compromise, say a malicious embed or a Chromium
+   0-day, finds no bridge to the main process, because there is not one.
 2. **Honesty.** "We do not modify Discord" is verifiable by reading
    `src/main/window.ts` and observing the absence of a `preload` key, rather
    than by trusting a claim about what the injected code does.
 3. **Policy integrity.** Every rule is enforced in the main process. A page
    that wanted to disable Ghost Mode has nothing to call.
 
-The cost is that features requiring page context — themes that need DOM
-knowledge, plugins, patched components — are out of scope by construction.
-That is a deliberate trade, not an oversight. User CSS is supported via
+The cost is that anything needing page context is out of scope by
+construction: themes that read the DOM, plugins, patched components. That is a
+trade, not an oversight. User CSS is supported via
 `webContents.insertCSS`, which injects styles and never script.
 
 ### Why profiles are sessions, not tabs
@@ -50,9 +49,9 @@ That is a deliberate trade, not an oversight. User CSS is supported via
 A profile owns a Chromium session partition: its own cookies, localStorage,
 IndexedDB, cache and service workers. Two profiles are two identities that
 cannot observe each other, which is what makes "work account on Stable,
-personal on Canary" meaningful rather than cosmetic.
+personal on Canary" meaningful instead of cosmetic.
 
-Ephemeral profiles use an in-memory partition — everything vanishes on close.
+Ephemeral profiles use an in-memory partition, so everything goes on close.
 
 Partition names are *derived* from the profile id (`src/common/profile.ts`),
 never stored, and the id is stripped to `[A-Za-z0-9_-]`. A hand-edited config
@@ -64,7 +63,7 @@ cannot point a profile at an attacker-chosen partition.
 | --- | --- |
 | `src/common/` | Pure logic, no Electron import. Directly unit-testable. |
 | `src/common/policy.ts` | The policy type, the three presets, and `normalizePolicy` |
-| `src/common/rules.ts` | The request classifier — the whole blocking behaviour |
+| `src/common/rules.ts` | The request classifier: the whole blocking behaviour |
 | `src/common/ua.ts` | User-agent and client-hint normalization |
 | `src/common/network.ts` | Proxy and secure-DNS configuration and validation |
 | `src/common/appearance.ts` | Layout mode, chat folders, and channel-path validation |
@@ -77,26 +76,25 @@ cannot point a profile at an attacker-chosen partition.
 | `src/preload/shell.ts` | The only bridge, attached only to our own UI |
 | `src/renderer/` | The settings panel. No `innerHTML` anywhere. |
 
-The `common` / `main` split is load-bearing: everything that decides *what the
-client does* lives in `common` and is tested without launching Electron. A
-privacy claim you cannot test is a marketing claim.
+The `common` / `main` split is load-bearing. Everything deciding *what the
+client does* lives in `common` and is tested without launching Electron.
 
 ## Startup order
 
 Order is not arbitrary and getting it wrong is the classic way an app claims to
 be portable while writing to `~/.config`:
 
-1. `initializePaths()` — resolve the data directory. Chromium captures its
-   paths during startup, so this must precede everything.
-2. `openConfig()` — read and re-validate config from disk.
-3. `applyChromiumSwitches(policy)` — command-line switches must be set before
+1. `initializePaths()`: resolve the data directory. Chromium captures its
+   paths during startup, so this has to come first.
+2. `openConfig()`: read and re-validate config from disk.
+3. `applyChromiumSwitches(policy)`: command-line switches must be set before
    `app.whenReady()`.
 4. Single-instance lock, then windows.
 
 Because switches are process-wide and set before a profile is chosen, they are
 driven by the **global** policy only. Per-profile overrides govern request
 filtering, permissions and headers, but not WebRTC policy. This asymmetry is
-real and is documented in `docs/PRIVACY.md` rather than papered over.
+real and is written down in `docs/PRIVACY.md`.
 
 ## Request pipeline
 
@@ -115,36 +113,35 @@ blocking policy is covered by `test/rules.test.ts` without a browser.
 
 Four failure modes, one behaviour: back off, then reload.
 
-- `render-process-gone` — the renderer crashed
-- `unresponsive` / `responsive` — the page is hung
-- `did-fail-load` on the main frame — a load failed
-- `powerMonitor` resume and a network-online poll — the socket died while away
+- `render-process-gone`: the renderer crashed
+- `unresponsive` / `responsive`: the page is hung
+- `did-fail-load` on the main frame: a load failed
+- `powerMonitor` resume and a network-online poll: the socket died while away
 
 Backoff doubles to a 60 s cap and resets on a successful load. `ERR_ABORTED`
 and `ERR_BLOCKED_BY_CLIENT` are explicitly *not* failures: the first is every
-SPA route change, and the second is our own filter doing its job — retrying it
-would spin forever and inflate the Privacy Inspector's numbers.
+SPA route change, and the second is our own filter working. Retrying either
+would spin forever and inflate the Inspector's counts.
 
 ## Testing
 
 Two suites, split by what they can actually catch.
 
-**`test/*.test.ts` — unit.** Pure modules only: the policy, the request
+**`test/*.test.ts`, unit.** Pure modules only: the policy, the request
 classifier, proxy and DNS validation, user-agent handling, portability. No
-Electron, so they run anywhere in under a second. This is where "we block
-telemetry" stops being a claim and becomes something you can run.
+Electron, so they run anywhere in under a second.
 
-**`test/e2e/*.e2e.ts` — end-to-end.** Launches the real packaged-layout app via
+**`test/e2e/*.e2e.ts`, end-to-end.** Launches the real packaged-layout app via
 `playwright-core` and drives it through the actual IPC path.
 
 The split exists because of where the bugs actually were. Every defect found in
-this project so far — a sandboxed preload that could not resolve its imports, a
-panel opening on the wrong pane, a "delete" that deleted only half of what it
-promised, a window that could not be re-shown, a CSP the panel itself violated
-— was invisible to a pure function and only appeared when the app ran. Each of
-those now has a test named after it.
+this project so far was invisible to a pure function and only showed up when
+the app ran: a sandboxed preload that could not resolve its imports, a panel
+opening on the wrong pane, a "delete" that deleted half of what it promised, a
+window that could not be re-shown, a CSP the panel itself violated. Each has a
+test named after it now.
 
-`playwright-core` is used rather than `playwright` specifically because it
+`playwright-core` is used instead of `playwright` because it
 never downloads browsers: the target is Electron, and a browser download would
 be pure cost.
 

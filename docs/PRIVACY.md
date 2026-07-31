@@ -29,7 +29,7 @@ Every entry below is enforced in the main process, is covered by
 | Chromium background services | Component updates, Safe Browsing, dictionary downloads, optimization hints |
 | Crash reporting | Breakpad and Crashpad are disabled at the Electron layer |
 | Hyperlink auditing (`<a ping>`) | Off |
-| Domain reliability reporting | Off — Chromium otherwise reports network errors to Google |
+| Domain reliability reporting | Off: Chromium otherwise reports network errors to Google |
 
 ### Ghost Mode (on from `strict` upward)
 
@@ -43,7 +43,7 @@ Every entry below is enforced in the main process, is covered by
 reads means Discord genuinely does not know you read anything: unread badges
 persist, and your read position does not sync to your phone or to another
 device. That is the mechanism working correctly, not a bug. Typing suppression
-has no such cost — it is purely outbound.
+has no such cost, since it is purely outbound.
 
 ### Exposure controls
 
@@ -60,7 +60,7 @@ has no such cost — it is purely outbound.
 | Normalize client hints | Rewrites `Sec-CH-UA*` so hints agree with the sanitized UA |
 | Minimize `Referer` | Origin only for same-site, nothing cross-site |
 | Global Privacy Control | Sends `Sec-GPC: 1` |
-| Spellchecker | **Off by default** — Chromium fetches dictionaries from Google on first use |
+| Spellchecker | **Off by default**, Chromium fetches dictionaries from Google on first use |
 
 Nyacord does **not** lie about your operating system. Claiming to be Windows
 while `navigator.platform`, font metrics and media capabilities all say Linux
@@ -75,7 +75,7 @@ fingerprint. We remove the token no browser would ever send and stop there.
 | `public_interface_only` | **Default.** Only the default-route interface |
 | `disable_non_proxied_udp` | `paranoid`. Most private, most likely to degrade voice |
 
-mDNS candidate obfuscation is explicitly enabled rather than left to Chromium's
+mDNS candidate obfuscation is set explicitly instead of left to Chromium's
 default, so a future upstream flip cannot silently change our posture.
 
 ### Network egress
@@ -105,29 +105,29 @@ Nyacord does **not** pick a DoH provider for you. Silently routing every lookup
 to a resolver of our choosing would move your DNS from one third party to
 another without asking. `automatic` upgrades to DoH when your own resolver
 supports it; naming a server is opt-in. Choosing `secure` with no valid server
-falls back to `automatic` rather than leaving Chromium unable to resolve
-anything — a client that resolves nothing is not secure, it is broken, and a
-user facing a dead app turns the whole feature off.
+falls back to `automatic` instead of leaving Chromium unable to resolve
+anything. A client that resolves nothing is not secure, it is broken, and
+someone facing a dead app turns the whole feature off instead of fixing one
+field.
 
 ### Permissions
 
 Default-deny. Camera, microphone, screen share, notifications and opening
-external applications prompt with a **native** dialog — a compromised renderer
-cannot draw a fake one or click it for you. WebHID, WebSerial, WebUSB and
+external applications prompt with a **native** dialog, which a compromised
+renderer cannot draw a fake of or click for you. WebHID, WebSerial, WebUSB and
 Bluetooth are refused outright at the device-handler level, not merely
 unprompted. Only the channel's own origin may request anything; an iframe from
 an embedded activity is refused silently.
 
 ## What Nyacord cannot do
 
-Stated plainly, because a privacy tool that overstates its reach is worse than
-one that does less.
+A privacy tool that overstates its reach is worse than one that does less.
 
 **Presence and online status are not filterable.** They travel as frames inside
 the gateway WebSocket, not as separate HTTP requests. Filtering them would
-require either intercepting the socket or running code inside Discord's page —
-and code inside the page is the architecture this project deliberately rejected
-(see `docs/RESEARCH.md`). Use Discord's own invisible status; it is enforced
+require either intercepting the socket or running code inside Discord's page,
+and code inside the page is the architecture this project rejected (see
+`docs/RESEARCH.md`). Use Discord's own invisible status; it is enforced
 server-side and works.
 
 **`X-Super-Properties` is left intact.** It carries your OS, locale and client
@@ -141,7 +141,7 @@ it.
 **Discord still sees your traffic.** Nyacord is a hardened browser, not a proxy.
 Your IP address, the servers you are in, and everything you send are visible to
 Discord exactly as they would be in Firefox. If your threat model includes
-Discord itself, no client-side tool solves it — that is a question about
+Discord itself, no client-side tool solves it. That is a question about
 whether to use the service at all.
 
 **Per-profile policy does not cover WebRTC or DNS.** Chromium command-line
@@ -150,8 +150,8 @@ host resolver is likewise a single process-wide object. So WebRTC and secure
 DNS follow the *global* setting even when a profile overrides everything else.
 Proxies are genuinely per-profile, because Chromium attaches them to sessions.
 
-**Portability is not perfect.** Nyacord directs its own state — config, cookies,
-cache, logs — to the portable directory. Chromium may still use the OS
+**Portability is not perfect.** Nyacord sends its own state to the portable
+directory: config, cookies, cache, logs. Chromium may still use the OS
 temporary directory for scratch data during a session.
 
 ## Verifying any of this

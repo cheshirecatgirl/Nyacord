@@ -5,7 +5,7 @@ import { IPC, type CreateProfileRequest } from "../common/ipc";
 import { normalizeAppearance, normalizeChatTarget } from "../common/appearance";
 import { normalizeDns } from "../common/network";
 import { normalizePolicy, presetPolicy, type PresetName } from "../common/policy";
-import type { NyacordConfig } from "./config";
+import type { NyaConfig } from "./config";
 import type { ProfileStore } from "./profiles";
 import type { PrivacyLedger } from "./privacy/ledger";
 import { openExternalSafely } from "./security/session";
@@ -19,7 +19,7 @@ import type { AppShell } from "./window";
  */
 export function registerIpc(
   shell: AppShell,
-  config: JsonStore<NyacordConfig>,
+  config: JsonStore<NyaConfig>,
   profiles: ProfileStore,
   ledger: PrivacyLedger,
   /** Re-applies the process-wide host resolver configuration. */
@@ -100,8 +100,8 @@ export function registerIpc(
       draft.appearance = next;
     });
     shell.pushState();
-    // Returned normalized so the UI shows what was actually stored — an entry
-    // with an unusable target is dropped, and the user should see that.
+    // Return the normalized value so the UI can show what was stored. Entries
+    // with an unusable target are dropped and that should be visible.
     return next;
   });
 
@@ -113,9 +113,8 @@ export function registerIpc(
 
   ipcMain.handle(IPC.setProfileProxy, async (_event, id: unknown, proxy: unknown) => {
     if (typeof id !== "string" || !profiles.find(id)) return null;
-    // The normalized result is returned so the UI can show what was actually
-    // stored — an invalid rule degrades to the system proxy rather than being
-    // accepted and silently ignored.
+    // An invalid rule degrades to the system proxy. Returning the stored
+    // value lets the UI say so instead of appearing to accept it.
     return shell.setProfileProxy(id, proxy);
   });
 

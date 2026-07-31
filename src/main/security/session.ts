@@ -13,7 +13,7 @@ import type { PrivacyLedger } from "../privacy/ledger";
  *
  * A session is configured once when its profile is created and then re-read
  * from `getPolicy()` on every decision, so toggling a setting takes effect on
- * the next request rather than requiring a restart.
+ * the next request, with no restart.
  */
 
 export interface SessionContext {
@@ -28,7 +28,7 @@ export interface SessionContext {
 
 /**
  * Chromium hands us permission strings that do not all appear in our policy
- * (they vary by version). Unknown permissions are denied — fail closed.
+ * (they vary by version). Unknown permissions are denied.
  */
 function toPermissionKey(permission: string): PermissionKey | null {
   switch (permission) {
@@ -90,9 +90,9 @@ export function configureSession(partition: string, ctx: SessionContext): Sessio
  * Erases everything a session holds: cookies, storage, caches, and the HTTP
  * auth cache that would otherwise re-authenticate silently.
  *
- * Resolved from the partition rather than from a live view, so it works for a
- * profile that has never been opened — otherwise "sign out" on an unopened
- * profile would appear to succeed while leaving the session intact.
+ * Resolved from the partition, not from a live view, so it works for a
+ * profile that has never been opened. Otherwise "sign out" would appear to
+ * succeed on such a profile while leaving the session intact.
  */
 export async function wipeSessionData(partition: string): Promise<void> {
   const ses = session.fromPartition(partition);
@@ -114,7 +114,7 @@ export async function applyProxy(ses: Session, proxy: ProxyConfig): Promise<void
     await ses.forceReloadProxyConfig();
     await ses.closeAllConnections();
   } catch (error) {
-    console.error("[nyacord] failed to apply proxy:", error);
+    console.error("[nya] failed to apply proxy:", error);
   }
 }
 
@@ -197,8 +197,8 @@ function applyPermissions(ses: Session, ctx: SessionContext): void {
   /**
    * `setPermissionCheckHandler` answers the synchronous `navigator.permissions`
    * query path. Without it a site can observe a "granted" state that the
-   * request handler would actually refuse — and, more importantly, Chromium
-   * defaults some checks to allow.
+   * request handler would refuse. Chromium also defaults some checks to
+   * allow.
    */
   ses.setPermissionCheckHandler((_contents, permission, requestingOrigin) => {
     const key = toPermissionKey(permission);

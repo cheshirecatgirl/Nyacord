@@ -25,12 +25,12 @@ import { _electron as electron, type ElectronApplication, type Page } from "play
 
 import type { AppState } from "../../src/common/ipc";
 import type { DnsConfig, ProxyConfig } from "../../src/common/network";
-import type { NyacordApi } from "../../src/preload/shell";
+import type { NyaApi } from "../../src/preload/shell";
 
 declare global {
   // The bridge the preload installs, as the panel's own scripts see it.
   interface Window {
-    nyacord: NyacordApi;
+    nya: NyaApi;
   }
 }
 
@@ -43,7 +43,7 @@ let app: ElectronApplication;
 let panel: Page;
 let dataDir: string;
 
-/** Console output that would indicate a broken page rather than a broken test. */
+/** Console output that would indicate a broken page, not a broken test. */
 const pageProblems: string[] = [];
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -51,7 +51,7 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 /**
  * The Discord view as seen from inside a main-process `evaluate`. Electron's
  * `View` type does not expose `webContents`, and the callback is compiled here
- * rather than where it runs.
+ * not where it runs.
  */
 interface MainView {
   webContents: {
@@ -79,13 +79,13 @@ async function until<T>(check: () => Promise<T> | T, timeoutMs = 15_000): Promis
 
 /** Reads the state the main process would hand the UI. */
 function state(): Promise<AppState> {
-  return panel.evaluate(() => window.nyacord.getState());
+  return panel.evaluate(() => window.nya.getState());
 }
 
 before(async () => {
   // A throwaway portable directory keeps the suite off the developer's real
   // config and exercises the `--data-dir` path at the same time.
-  dataDir = mkdtempSync(join(tmpdir(), "nyacord-e2e-"));
+  dataDir = mkdtempSync(join(tmpdir(), "nya-e2e-"));
 
   app = await electron.launch({
     executablePath: electronPath,
@@ -107,8 +107,8 @@ before(async () => {
   await until(async () => {
     const opened = await app.evaluate(({ Menu }) => {
       const menu = Menu.getApplicationMenu();
-      const nyacord = menu?.items.find((item) => (item.label || "").includes("Nyacord"));
-      const entry = nyacord?.submenu?.items.find((item) => (item.label || "").startsWith("Network"));
+      const nya = menu?.items.find((item) => (item.label || "").includes("Nyacord"));
+      const entry = nya?.submenu?.items.find((item) => (item.label || "").startsWith("Network"));
       if (!entry) return false;
       entry.click();
       return true;
@@ -151,8 +151,8 @@ describe("startup", () => {
 
   test("exposes the preload bridge", async () => {
     // A sandboxed preload cannot `require` relative modules; when that broke,
-    // `window.nyacord` silently never appeared and the panel stayed empty.
-    assert.equal(await panel.evaluate(() => typeof window.nyacord), "object");
+    // `window.nya` silently never appeared and the panel stayed empty.
+    assert.equal(await panel.evaluate(() => typeof window.nya), "object");
   });
 
   test("opens on the pane that was requested, not the default one", async () => {
@@ -163,7 +163,7 @@ describe("startup", () => {
 describe("profiles", () => {
   test("creates a profile on another release channel", async () => {
     const id = await panel.evaluate(() =>
-      window.nyacord.createProfile({ name: "E2E Canary", channel: "canary", ephemeral: false }),
+      window.nya.createProfile({ name: "E2E Canary", channel: "canary", ephemeral: false }),
     );
     assert.ok(id);
 
@@ -178,12 +178,12 @@ describe("profiles", () => {
     // The delete path also wipes the profile's session; the confirmation the
     // user sees promises both, and for a while only the config entry went.
     const id = await panel.evaluate(() =>
-      window.nyacord.createProfile({ name: "Doomed", channel: "ptb", ephemeral: false }),
+      window.nya.createProfile({ name: "Doomed", channel: "ptb", ephemeral: false }),
     );
     assert.ok(id);
     await until(async () => (await state()).profiles.some((profile) => profile.id === id));
 
-    assert.equal(await panel.evaluate((target) => window.nyacord.deleteProfile(target), id), true);
+    assert.equal(await panel.evaluate((target) => window.nya.deleteProfile(target), id), true);
     await until(async () => !(await state()).profiles.some((profile) => profile.id === id));
   });
 
@@ -194,7 +194,7 @@ describe("profiles", () => {
 
 describe("privacy policy", () => {
   test("applies a preset", async () => {
-    await panel.evaluate(() => window.nyacord.applyPreset("paranoid"));
+    await panel.evaluate(() => window.nya.applyPreset("paranoid"));
     const current = await until(async () => {
       const next = await state();
       return next.policy.preset === "paranoid" ? next : null;
@@ -207,14 +207,14 @@ describe("privacy policy", () => {
     // DNS is a network decision that outlives a privacy preset. Routing it
     // through setPolicy used to silently mark the whole policy "custom".
     const dns: DnsConfig = { mode: "secure", servers: ["https://dns.quad9.net/dns-query"] };
-    const stored = await panel.evaluate((value) => window.nyacord.setDns(value), dns);
+    const stored = await panel.evaluate((value) => window.nya.setDns(value), dns);
     assert.deepEqual(stored, dns);
     assert.equal((await state()).policy.preset, "paranoid");
   });
 
-  test("refuses secure DNS with no usable server rather than killing resolution", async () => {
+  test("refuses secure DNS with no usable server instead of killing resolution", async () => {
     const stored = await panel.evaluate(() =>
-      window.nyacord.setDns({ mode: "secure", servers: ["http://not-secure.example"] }),
+      window.nya.setDns({ mode: "secure", servers: ["http://not-secure.example"] }),
     );
     assert.equal(stored.mode, "automatic");
   });
@@ -239,7 +239,7 @@ describe("appearance", () => {
 
   test("stores folders and normalizes entry targets", async () => {
     const stored = await panel.evaluate(() =>
-      window.nyacord.setAppearance({
+      window.nya.setAppearance({
         layout: "unified",
         activeFolder: "work",
         folders: [
@@ -267,8 +267,8 @@ describe("appearance", () => {
   });
 
   test("refuses to navigate to a target outside Discord", async () => {
-    assert.equal(await panel.evaluate(() => window.nyacord.openChat("https://evil.example/x")), false);
-    assert.equal(await panel.evaluate(() => window.nyacord.openChat("/not/a/channel")), false);
+    assert.equal(await panel.evaluate(() => window.nya.openChat("https://evil.example/x")), false);
+    assert.equal(await panel.evaluate(() => window.nya.openChat("/not/a/channel")), false);
   });
 });
 
@@ -285,7 +285,7 @@ describe("request filtering", () => {
     assert.match(error, /ERR_BLOCKED_BY_CLIENT/);
 
     const snapshot = await until(async () => {
-      const ledger = await panel.evaluate(() => window.nyacord.getLedger());
+      const ledger = await panel.evaluate(() => window.nya.getLedger());
       return ledger.recent.some((entry) => entry.category === "telemetry") ? ledger : null;
     });
     assert.ok((snapshot.totals.telemetry ?? 0) > 0);
@@ -304,12 +304,12 @@ describe("proxy", () => {
       bypass: "",
     };
     const stored = await panel.evaluate(
-      ([id, proxy]) => window.nyacord.setProfileProxy(id as string, proxy as ProxyConfig),
+      ([id, proxy]) => window.nya.setProfileProxy(id as string, proxy as ProxyConfig),
       [active.id, requested] as const,
     );
     assert.equal(stored?.mode, "manual");
 
-    // Ask Chromium itself, rather than trusting that we stored a setting.
+    // Ask Chromium itself instead of trusting that we stored a setting.
     const resolved = await app.evaluate(({ BaseWindow }) => {
       const view = BaseWindow.getAllWindows()[0]?.contentView.children[0] as unknown as MainView;
       return view.webContents.session.resolveProxy("https://discord.com/app");
@@ -325,7 +325,7 @@ describe("proxy", () => {
 
     const stored = await panel.evaluate(
       (id) =>
-        window.nyacord.setProfileProxy(id as string, {
+        window.nya.setProfileProxy(id as string, {
           mode: "manual",
           rules: "socks5://host:99999",
           pacUrl: "",

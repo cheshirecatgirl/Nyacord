@@ -2,11 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <!--
-      The panel is local-only. Nothing here is allowed to reach the network,
-      inline a script or a style, or frame anything, so the policy can be
-      maximally tight. It is enforced with no 'unsafe-inline'.
-    -->
+    <!-- Local-only page: no network, no inline script or style, no framing. -->
     <meta
       http-equiv="Content-Security-Policy"
       content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none';"
@@ -44,8 +40,8 @@
 
         <section class="pane" data-pane="profiles" data-title="Profiles">
           <p class="hint">
-            Each profile is a separate browser session — its own cookies, storage and
-            login. Profiles cannot see each other.
+            Each profile is a separate browser session with its own cookies, storage
+            and login. Profiles cannot see each other.
           </p>
           <ul id="profile-list"></ul>
 
@@ -53,12 +49,11 @@
             <h3>New profile</h3>
             <div class="row">
               <input id="new-name" type="text" placeholder="Name" maxlength="48" />
-              <!-- Options are generated from the channel table in src/common. -->
               <select id="new-channel" aria-label="Release channel"></select>
             </div>
             <label class="check">
               <input id="new-ephemeral" type="checkbox" />
-              <span>Ephemeral — discard the session entirely on exit</span>
+              <span>Ephemeral: discard the session entirely on exit</span>
             </label>
             <button type="submit" class="primary">Create profile</button>
           </form>
@@ -71,10 +66,10 @@
         </section>
 
         <section class="pane hidden" data-pane="network" data-title="Network">
-          <h3>Proxy — <span id="proxy-profile"></span></h3>
+          <h3>Proxy for <span id="proxy-profile"></span></h3>
           <p class="hint">
-            A proxy is a per-profile setting, so one identity can go out over Tor or
-            a VPN while another goes out directly.
+            Set per profile, so one identity can leave over Tor or a VPN while
+            another leaves directly.
           </p>
           <div class="row">
             <select id="proxy-mode" aria-label="Proxy mode">
@@ -100,14 +95,14 @@
 
           <h3 class="spaced">Secure DNS</h3>
           <p class="hint">
-            Encrypts the lookups that reveal which hosts you contact to whoever runs
-            your network. This is a process-wide setting and applies to every profile.
+            Hides which hosts you contact from whoever runs your network. Applies to
+            every profile.
           </p>
           <div class="row">
             <select id="dns-mode" aria-label="Secure DNS mode">
-              <option value="off">Off — plain system DNS</option>
-              <option value="automatic">Automatic — upgrade when supported</option>
-              <option value="secure">Secure — DoH only</option>
+              <option value="off">Off (plain system DNS)</option>
+              <option value="automatic">Automatic (upgrade when supported)</option>
+              <option value="secure">Secure (DoH only)</option>
             </select>
           </div>
           <div class="row">
@@ -122,8 +117,8 @@
         <section class="pane hidden" data-pane="appearance" data-title="Appearance">
           <h3>Navigation layout</h3>
           <p class="hint">
-            How chats are arranged. The previews below are live — they are built from
-            the same stylesheet the layout uses.
+            How chats are arranged. Both previews are built from the layout's own
+            stylesheet, so they show what you actually get.
           </p>
 
           <div id="layouts" class="layouts"></div>
@@ -132,15 +127,14 @@
 
           <h3 class="spaced">Folder switcher</h3>
           <p class="hint">
-            The strip that sits above the chat list. This is the real component —
-            pick a tab and the choice is remembered across restarts.
+            Sits above the chat list. Pick a tab; the choice survives a restart.
           </p>
           <div id="switcher" class="switcher" role="tablist" aria-label="Active folder"></div>
 
           <h3 class="spaced">Folders</h3>
           <p class="hint">
-            Extra tabs in the switcher, after DMs and Servers. Add a chat by pasting
-            its Discord link or channel path — clicking a row opens it in the active
+            Extra tabs in the switcher, after DMs and Servers. Paste a Discord link
+            or channel path to add a chat. Clicking a row opens it in the active
             profile.
           </p>
           <ul id="folder-list"></ul>
@@ -152,8 +146,7 @@
 
         <section class="pane hidden" data-pane="inspector" data-title="Inspector">
           <p class="hint">
-            Everything Nyacord has blocked since launch. This list lives in memory only
-            and is never written to disk.
+            Blocked since launch. Kept in memory only, never written to disk.
           </p>
           <div id="totals" class="totals"></div>
           <div class="row end">
@@ -164,9 +157,8 @@
 
         <section class="pane hidden" data-pane="about" data-title="About">
           <p class="hint">
-            A hardened browser shell around Discord's web application. It does not
-            modify Discord, inject scripts into it, or speak to the Discord API on
-            your behalf.
+            A hardened browser shell around Discord's web app. It does not modify
+            Discord, inject scripts into it, or call the Discord API for you.
           </p>
           <dl id="about-facts"></dl>
         </section>

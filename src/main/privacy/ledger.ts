@@ -4,8 +4,8 @@ import type { RuleCategory } from "../../common/rules";
 /**
  * The Privacy Inspector's backing store.
  *
- * Every block decision is recorded so the user can audit the claim rather than
- * trust it. The ledger is memory-only and bounded: it is a debugging and
+ * Every block decision is recorded so the behaviour can be audited instead of
+ * taken on trust. The ledger is memory-only and bounded: it is a debugging and
  * verification aid, not a log file, and writing a list of every URL you
  * touched to disk would be its own privacy problem.
  */

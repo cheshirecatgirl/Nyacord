@@ -5,8 +5,8 @@ import type { WebContentsView } from "electron";
  *
  * A chat client that silently sits on a blank white view after a renderer
  * crash or a laptop resume is worse than one that crashes loudly. The watchdog
- * turns the four ways a view can die — crash, hang, load failure, and a
- * network partition — into one behaviour: back off, then reload.
+ * gives the four ways a view can die (crash, hang, load failure, network
+ * partition) one behaviour: back off, then reload.
  *
  * Backoff is capped and reset on success so a flaky connection does not turn
  * into a reload storm against Discord's servers.
@@ -20,9 +20,9 @@ const MAX_DELAY_MS = 60_000;
  *
  * `ERR_ABORTED` is reported for every ordinary cancelled navigation, including
  * each SPA route change. `ERR_BLOCKED_BY_CLIENT` is *our own* privacy filter
- * refusing the request — retrying it would spin the watchdog against a rule
- * that will never let it through, and would fill the ledger with phantom
- * blocks that make the Privacy Inspector lie about how much traffic occurred.
+ * refusing the request. Retrying would spin against a rule that will never
+ * let it through, and fill the ledger with phantom blocks that inflate the
+ * Inspector's counts.
  */
 const IGNORED_LOAD_ERRORS = new Set([
   -3, // ERR_ABORTED
@@ -90,7 +90,7 @@ export class ViewWatchdog {
     }, delay);
   }
 
-  /** Forces an immediate reload and resets the backoff — used by "Reload" in the menu. */
+  /** Immediate reload, backoff reset. Used by "Reload" in the menu. */
   reload(): void {
     if (this.disposed) return;
     const contents = this.view.webContents;

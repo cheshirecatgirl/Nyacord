@@ -4,7 +4,7 @@ import { CHANNELS, type ChannelId } from "../common/channels";
 import { defaultProxy, normalizeProxy, type ProxyConfig } from "../common/network";
 import type { PrivacyPolicy } from "../common/policy";
 import { newProfileId, partitionFor, type Profile } from "../common/profile";
-import type { NyacordConfig } from "./config";
+import type { NyaConfig } from "./config";
 import type { JsonStore } from "./store";
 
 /**
@@ -13,7 +13,7 @@ import type { JsonStore } from "./store";
  * shows nothing and offers no way out; that state simply does not exist here.
  */
 export class ProfileStore {
-  constructor(private readonly store: JsonStore<NyacordConfig>) {
+  constructor(private readonly store: JsonStore<NyaConfig>) {
     if (this.all().length === 0) {
       this.create({ name: "Discord", channel: "stable", ephemeral: false });
     }
@@ -83,8 +83,8 @@ export class ProfileStore {
   }
 
   /**
-   * A profile may pin its own policy — "this account is paranoid, that one is
-   * not" — otherwise it inherits the global one.
+   * A profile may pin its own policy, so one account can be paranoid while
+   * another is not. Without one it inherits the global policy.
    */
   policyFor(id: string): PrivacyPolicy {
     return this.find(id)?.policy ?? this.store.get().policy;

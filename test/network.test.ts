@@ -92,8 +92,8 @@ describe("normalizeProxy", () => {
   test("a bare hostname is accepted, matching Chromium's own semantics", () => {
     // Chromium treats `proxy.example.com` as a proxy on the default port, so
     // rejecting it would refuse a configuration that genuinely works. A typo
-    // here fails closed — the host does not resolve and requests fail — rather
-    // than quietly falling back to a direct connection.
+    // here fails closed: the host does not resolve and requests fail, instead
+    // of quietly falling back to a direct connection.
     assert.equal(normalizeProxy({ mode: "manual", rules: "proxy.example.com" }).mode, "manual");
   });
 
@@ -128,7 +128,7 @@ describe("proxyToElectron", () => {
     );
   });
 
-  test("omits an empty bypass list rather than sending one", () => {
+  test("omits an empty bypass list instead of sending one", () => {
     const config = proxyToElectron({ mode: "manual", rules: "h:1", pacUrl: "", bypass: "" });
     assert.equal("proxyBypassRules" in config, false);
   });

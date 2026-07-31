@@ -50,7 +50,7 @@ describe("client hints", () => {
     assert.equal(clientHintPlatform("sunos"), '"Unknown"');
   });
 
-  test("survive a malformed version rather than emitting NaN", () => {
+  test("survive a malformed version without emitting NaN", () => {
     assert.equal(chromeMajor(""), "0");
     assert.equal(chromeMajor("abc"), "0");
   });
@@ -86,7 +86,7 @@ describe("unread badge", () => {
     assert.equal(parseBadgeFromTitle("#general (3)"), 0, "only a leading count counts");
   });
 
-  test("ignores a non-numeric parenthetical rather than producing NaN", () => {
+  test("ignores a non-numeric parenthetical instead of producing NaN", () => {
     assert.equal(parseBadgeFromTitle("(new) Discord"), 0);
     assert.equal(parseBadgeFromTitle("(•) Discord"), 0);
   });
@@ -94,12 +94,12 @@ describe("unread badge", () => {
 
 describe("session partitions", () => {
   test("persistent profiles persist and ephemeral ones do not", () => {
-    assert.equal(partitionFor({ id: "abc123", ephemeral: false }), "persist:nyacord-abc123");
-    assert.equal(partitionFor({ id: "abc123", ephemeral: true }), "nyacord-eph-abc123");
+    assert.equal(partitionFor({ id: "abc123", ephemeral: false }), "persist:nya-abc123");
+    assert.equal(partitionFor({ id: "abc123", ephemeral: true }), "nya-eph-abc123");
   });
 
   test("a hand-edited id cannot escape the namespace", () => {
-    assert.equal(partitionFor({ id: "../../etc", ephemeral: false }), "persist:nyacord-etc");
-    assert.equal(partitionFor({ id: "persist:evil", ephemeral: true }), "nyacord-eph-persistevil");
+    assert.equal(partitionFor({ id: "../../etc", ephemeral: false }), "persist:nya-etc");
+    assert.equal(partitionFor({ id: "persist:evil", ephemeral: true }), "nya-eph-persistevil");
   });
 });

@@ -163,7 +163,7 @@ describe("non-network schemes", () => {
     }
   });
 
-  test("a malformed URL is allowed rather than throwing", () => {
+  test("a malformed URL is allowed, not thrown on", () => {
     assert.equal(classify(xhr("not a url"), paranoidPolicy()).blocked, false);
   });
 });

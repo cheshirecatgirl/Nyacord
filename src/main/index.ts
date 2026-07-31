@@ -43,9 +43,9 @@ let tray: AppTray | null = null;
 app.on("second-instance", () => shell?.focus());
 
 /**
- * Secure DNS is configured on the host resolver, which is process-wide — so
- * like the Chromium switches it follows the global policy, not a profile.
- * It must be set before the first resolution, hence immediately on ready.
+ * Secure DNS is configured on the host resolver, which is process-wide, so
+ * like the Chromium switches it follows the global config, not a
+ * profile. It has to be set before the first resolution.
  */
 function configureDns(): void {
   const { dns } = config.get();
@@ -55,7 +55,7 @@ function configureDns(): void {
       secureDnsServers: dns.servers,
     });
   } catch (error) {
-    console.error("[nyacord] failed to configure secure DNS:", error);
+    console.error("[nya] failed to configure secure DNS:", error);
   }
 }
 
@@ -91,7 +91,7 @@ app.whenReady().then(() => {
   /**
    * Resuming from sleep and regaining connectivity are the two moments a
    * long-lived chat client most often comes back to a dead socket. Both nudge
-   * the watchdogs rather than waiting for Discord's own retry.
+   * the watchdogs instead of waiting on Discord's own retry.
    */
   powerMonitor.on("resume", () => shell?.onNetworkOnline());
 
@@ -116,7 +116,7 @@ app.whenReady().then(() => {
 });
 
 /**
- * Closing the window hides it rather than destroying it, so this only fires
+ * Closing the window hides it instead of destroying it, so this only fires
  * during a real quit. It stays as a safety net for the case where the tray
  * icon failed to load: without a tray there is no way back to a hidden
  * window, so on those platforms the app should genuinely exit.

@@ -5,9 +5,9 @@ import { dirname } from "node:path";
  * A small, dependency-free, crash-safe JSON store.
  *
  * Writes go to a temporary file and are renamed into place, which is atomic on
- * every platform we target. A corrupted config is moved aside rather than
- * deleted, and startup continues with defaults — losing your window position
- * is acceptable, refusing to launch is not.
+ * every platform we target. A corrupted config is moved aside instead of
+ * deleted, and startup continues with defaults. Losing a window position is
+ * acceptable; refusing to launch is not.
  */
 export class JsonStore<T extends object> {
   private data: T;
@@ -34,7 +34,7 @@ export class JsonStore<T extends object> {
       } catch {
         /* best effort; the point is not to lose the user's data silently */
       }
-      console.error(`[nyacord] config unreadable (${String(error)}); kept a copy at ${backup}`);
+      console.error(`[nya] config unreadable (${String(error)}); kept a copy at ${backup}`);
       return this.defaults();
     }
   }
@@ -70,7 +70,7 @@ export class JsonStore<T extends object> {
       writeFileSync(tmp, JSON.stringify(this.data, null, 2), { encoding: "utf8", mode: 0o600 });
       renameSync(tmp, this.file);
     } catch (error) {
-      console.error("[nyacord] failed to persist config:", error);
+      console.error("[nya] failed to persist config:", error);
     }
   }
 }

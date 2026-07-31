@@ -6,8 +6,8 @@ import type { DnsConfig, ProxyConfig } from "../common/network";
 import type { PrivacyPolicy } from "../common/policy";
 
 /**
- * The only bridge in the application, and it is attached to our own local UI —
- * never to Discord.
+ * The only bridge in the application, attached to our own local UI. Never to
+ * Discord.
  *
  * Each method is a named, fixed-arity wrapper. There is deliberately no
  * generic `invoke(channel, …)`: if a future feature needs a new capability it
@@ -75,6 +75,6 @@ const api = {
   },
 };
 
-export type NyacordApi = typeof api;
+export type NyaApi = typeof api;
 
-contextBridge.exposeInMainWorld("nyacord", api);
+contextBridge.exposeInMainWorld("nya", api);

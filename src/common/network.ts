@@ -3,9 +3,8 @@
  *
  * These are the two levers that decide *who else* learns what you are doing,
  * as opposed to what Discord itself learns. A proxy decides which network your
- * traffic appears to come from; secure DNS decides whether your resolver — an
- * ISP, a hotel, a corporate network — gets a plaintext list of every host you
- * contact.
+ * traffic appears to come from. Secure DNS decides whether your resolver (an
+ * ISP, a hotel, an office) gets a plaintext list of every host you contact.
  *
  * Both are validated here as pure functions, because a malformed proxy rule
  * does not fail loudly: Chromium quietly falls back to a direct connection,
@@ -121,7 +120,7 @@ export function normalizeProxy(input: unknown): ProxyConfig {
   const bypass = typeof raw["bypass"] === "string" ? raw["bypass"].trim() : "";
 
   // A mode whose required input is missing or invalid degrades to `system`
-  // rather than to `direct`: silently sending traffic straight out when the
+  // instead of `direct`: silently sending traffic straight out when the
   // user asked for a proxy is the one outcome we must never produce.
   if (mode === "manual") {
     if (!isValidProxyRules(rules)) return base;
@@ -178,8 +177,8 @@ export function describeProxy(config: ProxyConfig): string {
 
 /**
  * SOCKS5 resolves hostnames at the proxy, so DNS does not leak locally. The
- * HTTP proxy schemes do not, which is worth saying in the UI rather than
- * leaving as folklore.
+ * HTTP proxy schemes do not, which the UI says out loud instead of
+ * leaving it as folklore.
  */
 export function proxyResolvesRemotely(config: ProxyConfig): boolean {
   if (config.mode !== "manual") return false;
@@ -193,7 +192,7 @@ export type SecureDnsMode =
   | "off"
   /** Upgrade to DoH when the system resolver is known to support it. */
   | "automatic"
-  /** DoH only. Resolution fails rather than falling back to plaintext. */
+  /** DoH only. Resolution fails instead of falling back to plaintext. */
   | "secure";
 
 export interface DnsConfig {
@@ -219,8 +218,8 @@ export function isValidDohServer(template: string): boolean {
  * `secure` with no servers configured would leave Chromium unable to resolve
  * anything at all, so it is downgraded to `automatic`. Failing closed is the
  * right instinct in general, but a client that cannot resolve any host is not
- * secure, it is broken — and a user faced with a totally dead app will turn
- * the whole feature off rather than fix one field.
+ * secure, it is broken, and someone facing a dead app turns the whole feature
+ * off instead of fixing one field.
  */
 export function normalizeDns(input: unknown): DnsConfig {
   const raw = (typeof input === "object" && input !== null ? input : {}) as Record<string, unknown>;

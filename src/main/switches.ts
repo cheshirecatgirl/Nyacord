@@ -23,7 +23,7 @@ function webRtcSwitch(policy: WebRtcPolicy): string | null {
 
 export function applyChromiumSwitches(policy: PrivacyPolicy): void {
   // Renderers must never have Node. `enableSandbox` makes this the default for
-  // every window rather than something each BrowserWindow has to remember.
+  // every window, not something each BrowserWindow has to remember.
   app.enableSandbox();
 
   const disabledFeatures = [

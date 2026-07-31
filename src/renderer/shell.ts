@@ -1,13 +1,11 @@
 /**
- * Shell UI.
+ * Settings panel UI.
  *
- * Bundled, so it imports the real definitions from `src/common` rather than
- * re-declaring them. Channel names and accents, rule-category labels and every
- * shared type have exactly one definition in the codebase.
+ * Bundled, so shared types and constants come from src/common instead of being
+ * redeclared here.
  *
- * All DOM is built with `createElement` and `textContent`; there is no
- * `innerHTML` anywhere, which matters because the Privacy Inspector renders
- * URLs that came off the network. They must be inert text, and they are.
+ * DOM is built with createElement and textContent only. The Inspector shows
+ * URLs pulled off the network, so none of it may go through innerHTML.
  */
 
 import {
@@ -27,9 +25,9 @@ import { describeProxy, proxyResolvesRemotely, type DnsConfig, type ProxyConfig 
 import type { GhostPolicy, PrivacyPolicy } from "../common/policy";
 import type { ProfileSummary } from "../common/profile";
 import { RULE_CATEGORY_LABELS } from "../common/rules";
-import type { NyacordApi } from "../preload/shell";
+import type { NyaApi } from "../preload/shell";
 
-const nyacord = (window as unknown as { nyacord: NyacordApi }).nyacord;
+const nya = (window as unknown as { nya: NyaApi }).nya;
 
 /** The policy fields that are a plain on/off switch. */
 type BooleanPolicyKey = {
@@ -40,11 +38,7 @@ type ToggleDef =
   | { group: string; scope: "policy"; key: BooleanPolicyKey; title: string; detail: string }
   | { group: string; scope: "ghost"; key: keyof GhostPolicy; title: string; detail: string };
 
-/**
- * The privacy pane is generated from this table, so a policy field cannot ship
- * without a user-facing explanation of what it does. The keys are checked
- * against the policy type at compile time.
- */
+/** Drives the privacy pane. Keys are type-checked against the policy. */
 const TOGGLES: readonly ToggleDef[] = [
   {
     group: "Tracking",
@@ -144,7 +138,7 @@ const TOGGLES: readonly ToggleDef[] = [
     scope: "policy",
     key: "globalPrivacyControl",
     title: "Send Global Privacy Control",
-    detail: "Sec-GPC: 1 — a legally recognised opt-out signal in some jurisdictions.",
+    detail: "Sends Sec-GPC: 1, an opt-out signal with legal weight in some places.",
   },
   {
     group: "System",
@@ -189,10 +183,10 @@ for (const tab of document.querySelectorAll<HTMLElement>(".tab")) {
   tab.addEventListener("click", () => showPane(tab.dataset["pane"] as PaneId));
 }
 
-$("#close").addEventListener("click", () => void nyacord.closePanel());
-$("#backdrop").addEventListener("click", () => void nyacord.closePanel());
+$("#close").addEventListener("click", () => void nya.closePanel());
+$("#backdrop").addEventListener("click", () => void nya.closePanel());
 window.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") void nyacord.closePanel();
+  if (event.key === "Escape") void nya.closePanel();
 });
 
 // ----------------------------------------------------------------- profiles
@@ -220,8 +214,7 @@ function renderProfiles(): void {
 
     const sub = document.createElement("div");
     sub.className = "sub";
-    // Egress is shown per profile so it is obvious at a glance which identity
-    // is proxied and which is not.
+    // Shows egress per profile, so a proxied identity is obvious at a glance.
     sub.textContent = [
       channel.label,
       profile.ephemeral ? "ephemeral" : null,
@@ -240,18 +233,18 @@ function renderProfiles(): void {
       li.append(badge);
     }
 
-    if (!profile.active) li.append(button("Open", () => void nyacord.switchProfile(profile.id)));
+    if (!profile.active) li.append(button("Open", () => void nya.switchProfile(profile.id)));
 
     li.append(
       button("Rename", () => {
         const next = window.prompt("New name", profile.name);
-        if (next) void nyacord.renameProfile(profile.id, next);
+        if (next) void nya.renameProfile(profile.id, next);
       }),
     );
     li.append(
       button("Sign out", () => {
         if (window.confirm(`Clear all stored data for "${profile.name}"?`)) {
-          void nyacord.clearProfileData(profile.id);
+          void nya.clearProfileData(profile.id);
         }
       }),
     );
@@ -259,7 +252,7 @@ function renderProfiles(): void {
     if (state.profiles.length > 1) {
       const remove = button("Delete", () => {
         if (window.confirm(`Delete the profile "${profile.name}" and its data?`)) {
-          void nyacord.deleteProfile(profile.id);
+          void nya.deleteProfile(profile.id);
         }
       });
       remove.classList.add("danger");
@@ -287,7 +280,7 @@ $("#new-profile").addEventListener("submit", (event) => {
   const name = ($("#new-name") as HTMLInputElement).value;
   const channel = ($("#new-channel") as HTMLSelectElement).value as ProfileSummary["channel"];
   const ephemeral = ($("#new-ephemeral") as HTMLInputElement).checked;
-  void nyacord.createProfile({ name, channel, ephemeral }).then(() => {
+  void nya.createProfile({ name, channel, ephemeral }).then(() => {
     ($("#new-name") as HTMLInputElement).value = "";
     ($("#new-ephemeral") as HTMLInputElement).checked = false;
   });
@@ -302,14 +295,14 @@ function renderPrivacy(): void {
   const presets = $("#presets");
   presets.textContent = "";
   for (const name of PRESETS) {
-    const el = button(name[0]!.toUpperCase() + name.slice(1), () => void nyacord.applyPreset(name));
+    const el = button(name[0]!.toUpperCase() + name.slice(1), () => void nya.applyPreset(name));
     if (policy.preset === name) el.classList.add("active");
     presets.append(el);
   }
 
   $("#preset-note").textContent =
     policy.preset === "custom"
-      ? "Custom — you have changed individual settings."
+      ? "Custom: you have changed individual settings."
       : "Pick a preset, or change anything below to go custom.";
 
   const container = $("#toggles");
@@ -333,8 +326,7 @@ function renderPrivacy(): void {
     input.checked =
       toggle.scope === "ghost" ? policy.ghost[toggle.key] : policy[toggle.key];
 
-    // Sub-toggles are meaningless while the master switch is off; disable them
-    // rather than letting someone set a suppression that does nothing.
+    // Sub-toggles do nothing while the master switch is off, so disable them.
     if (toggle.scope === "ghost" && toggle.key !== "enabled" && !policy.ghost.enabled) {
       input.disabled = true;
       row.classList.add("inactive");
@@ -344,7 +336,7 @@ function renderPrivacy(): void {
       const next: PrivacyPolicy = { ...policy, ghost: { ...policy.ghost } };
       if (toggle.scope === "ghost") next.ghost[toggle.key] = input.checked;
       else next[toggle.key] = input.checked;
-      void nyacord.setPolicy(next);
+      void nya.setPolicy(next);
     });
 
     const grow = document.createElement("div");
@@ -387,7 +379,7 @@ function renderNetwork(): void {
   ($("#dns-servers") as HTMLInputElement).value = state.dns.servers.join(" ");
 }
 
-/** Only show the input the selected mode actually uses. */
+/** Show only the field the selected mode uses. */
 function updateProxyFields(): void {
   const mode = ($("#proxy-mode") as HTMLSelectElement).value;
   $("#proxy-rules-row").classList.toggle("hidden", mode !== "manual");
@@ -411,14 +403,13 @@ $("#proxy-apply").addEventListener("click", () => {
   const status = $("#proxy-status");
   status.textContent = "Applying…";
 
-  void nyacord.setProfileProxy(profile.id, requested).then((stored) => {
+  void nya.setProfileProxy(profile.id, requested).then((stored) => {
     if (!stored) {
       status.textContent = "Failed to apply.";
       return;
     }
-    // The main process rejects malformed input by falling back to the system
-    // proxy. Say so plainly — silently ignoring a bad rule would leave the
-    // user believing they are proxied when they are not.
+    // Bad input falls back to the system proxy in the main process. Say so:
+    // swallowing it would leave the user thinking they are proxied.
     if (stored.mode !== requested.mode) {
       status.textContent = `Rejected: that ${requested.mode} setting is not valid. Left on "${stored.mode}".`;
     } else if (proxyResolvesRemotely(stored)) {
@@ -436,7 +427,7 @@ $("#dns-apply").addEventListener("click", () => {
     .filter((s) => s.length > 0);
   const status = $("#dns-status");
 
-  void nyacord.setDns({ mode, servers }).then((dns) => {
+  void nya.setDns({ mode, servers }).then((dns) => {
     status.textContent =
       dns.mode !== mode
         ? 'Needs at least one valid https:// server for "secure"; left on automatic.'
@@ -469,11 +460,10 @@ function mockTab(active: boolean, width: "sm" | "md" | "lg"): HTMLDivElement {
 }
 
 /**
- * The unified column: a folder switcher along the top, one list below it.
+ * The unified column: folder switcher on top, one list below.
  *
- * Only the active folder is shown, which is what keeps the column short — the
- * alternative, both groups stacked in one scroll, is two lists sharing a
- * container rather than a merged navigation surface.
+ * Showing a single folder is what keeps the column short. Stacking both groups
+ * in one scroll would just be two lists in one container.
  */
 function unifiedMock(): HTMLDivElement {
   return mock(
@@ -521,7 +511,7 @@ const LAYOUT_CARDS: {
     title: "Unified",
     tag: "Default",
     desc:
-      "One column with a small folder switcher on top. DMs, Servers and your own folders are tabs in the same strip, so you move between them in one click without changing navigation surface — and the list stays short because only the active folder is shown.",
+      "One column with a folder switcher on top. DMs, Servers and your own folders share the strip, so moving between them is a single click, and only the active folder is listed.",
     preview: unifiedMock,
   },
   {
@@ -539,7 +529,7 @@ function appearance(): AppearanceConfig {
 }
 
 function saveAppearance(next: AppearanceConfig, status?: string): void {
-  void nyacord.setAppearance(next).then((stored) => {
+  void nya.setAppearance(next).then((stored) => {
     if (state) state = { ...state, appearance: stored };
     renderAppearance();
     if (status) $("#folder-status").textContent = status;
@@ -581,10 +571,7 @@ function renderAppearance(): void {
   renderFolders(current);
 }
 
-/**
- * The switcher itself, rendered from the same data the layout uses rather than
- * as a picture of it — so what is shown here is what ships.
- */
+/** The switcher itself, built from the same data the layout uses. */
 function renderSwitcher(current: AppearanceConfig): void {
   const strip = $("#switcher");
   strip.textContent = "";
@@ -604,8 +591,7 @@ function renderSwitcher(current: AppearanceConfig): void {
     label.textContent = tab.label;
     pill.append(label);
 
-    // Built-in tabs are filled by Discord, so a count would be a number we do
-    // not have rather than a zero.
+    // Built-in tabs are filled by Discord, so we have no count to show.
     if (!tab.builtin) {
       const count = document.createElement("span");
       count.className = "count";
@@ -647,8 +633,7 @@ function renderFolders(current: AppearanceConfig): void {
 
     head.append(
       button("Tone", () => {
-        // Cycling beats a colour picker here: the palette is closed, so a
-        // click is faster than choosing from a menu of six.
+        // The palette is closed, so cycling is quicker than a picker.
         const next = FOLDER_TONES[(FOLDER_TONES.indexOf(folder.tone) + 1) % FOLDER_TONES.length];
         update(index, (draft) => {
           draft.tone = next as FolderTone;
@@ -697,7 +682,7 @@ function renderFolders(current: AppearanceConfig): void {
         grow2.append(entryName, target);
         row.append(grow2);
 
-        row.append(button("Open", () => void nyacord.openChat(entry.target)));
+        row.append(button("Open", () => void nya.openChat(entry.target)));
         const drop = button("Remove", () =>
           update(index, (draft) => {
             draft.entries = draft.entries.filter((_, i) => i !== entryIndex);
@@ -738,8 +723,8 @@ function renderFolders(current: AppearanceConfig): void {
     );
     if (!raw) return;
 
-    // Validated here as well as in the main process, purely so the message can
-    // be specific instead of the entry silently vanishing on save.
+    // Also validated in main. Checking here lets the message name the problem
+    // instead of the entry quietly disappearing on save.
     const target = normalizeChatTarget(raw);
     if (!target) {
       $("#folder-status").textContent = "That is not a Discord channel link.";
@@ -788,7 +773,7 @@ $("#folder-add").addEventListener("click", () => {
 // ---------------------------------------------------------------- inspector
 
 async function refreshLedger(): Promise<void> {
-  renderLedger(await nyacord.getLedger());
+  renderLedger(await nya.getLedger());
 }
 
 function renderLedger(snapshot: LedgerSnapshot): void {
@@ -829,7 +814,7 @@ function renderLedger(snapshot: LedgerSnapshot): void {
 }
 
 $("#clear-ledger").addEventListener("click", () => {
-  void nyacord.clearLedger().then(refreshLedger);
+  void nya.clearLedger().then(refreshLedger);
 });
 
 // -------------------------------------------------------------------- about
@@ -847,7 +832,7 @@ function renderAbout(): void {
     ["Data directory", state.dataDir],
     ["Runtime dependencies", "none"],
   ];
-  if (state.devMode) facts.push(["Mode", "Developer — DevTools enabled"]);
+  if (state.devMode) facts.push(["Mode", "Developer (DevTools enabled)"]);
 
   for (const [term, value] of facts) {
     const dt = document.createElement("dt");
@@ -870,7 +855,7 @@ function render(next: AppState): void {
 }
 
 populateChannelOptions();
-nyacord.onStateChanged(render);
-nyacord.onLedgerChanged(renderLedger);
-nyacord.onShowPane(showPane);
-void nyacord.getState().then(render);
+nya.onStateChanged(render);
+nya.onLedgerChanged(renderLedger);
+nya.onShowPane(showPane);
+void nya.getState().then(render);

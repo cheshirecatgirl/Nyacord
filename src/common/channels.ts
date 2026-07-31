@@ -1,7 +1,7 @@
 /**
  * Discord ships three public release channels. Each one is a separate origin
  * with its own cookies, its own build pipeline and its own session, so Nyacord
- * treats them as first-class targets rather than as a hidden setting.
+ * treats them as first-class targets, not a hidden setting.
  */
 
 export type ChannelId = "stable" | "ptb" | "canary";
@@ -16,7 +16,7 @@ export interface ChannelDef {
   /**
    * Each channel is tinted so you always know which build you are in. The
    * colour itself is presentation and lives in the stylesheet, keyed on the
-   * channel id — the panel's Content-Security-Policy forbids inline styles.
+   * channel id, since the panel's Content-Security-Policy forbids inline styles.
    */
   readonly description: string;
 }

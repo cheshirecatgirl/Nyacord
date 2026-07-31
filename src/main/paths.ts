@@ -28,12 +28,12 @@ function writable(dir: string): boolean {
 
 /**
  * Must run before `app.whenReady()`. Redirecting Chromium's paths afterwards
- * is not reliable — the cache and session directories are captured during
+ * is unreliable, because the cache and session directories are captured during
  * startup.
  *
  * If the portable directory turns out to be read-only (burned to a disc,
  * mounted noexec, a locked USB stick) we fall back to the OS location and say
- * so, rather than silently failing to persist anything.
+ * so, instead of silently failing to persist anything.
  */
 export function initializePaths(): PortableDecision {
   if (decision) return decision;

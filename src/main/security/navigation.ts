@@ -7,10 +7,9 @@ import { openExternalSafely } from "./session";
  * Navigation containment.
  *
  * The Discord view is allowed to be Discord and nothing else. Any attempt to
- * navigate the top-level frame somewhere else — a phishing link, a redirect
- * chain, an OAuth hop to an attacker-controlled host — is cancelled and handed
- * to the user's real browser, where their normal defences (extensions, URL
- * bar, profile separation) apply.
+ * navigate the top-level frame somewhere else (a phishing link, a redirect
+ * chain, an OAuth hop to a host we do not control) is cancelled and handed to
+ * the user's real browser, where their usual defences apply.
  *
  * This matters more in a desktop shell than in a browser: there is no address
  * bar here, so a page that navigates itself away is a page the user cannot

@@ -18,15 +18,15 @@ export interface WindowBounds {
   maximized: boolean;
 }
 
-export interface NyacordConfig {
+export interface NyaConfig {
   /** Bumped when a migration is needed; unknown future versions fall back to defaults. */
   version: number;
   policy: PrivacyPolicy;
   /**
-   * Secure DNS lives beside the privacy policy rather than inside it. The host
+   * Secure DNS lives beside the privacy policy, not inside it. The host
    * resolver is process-wide, so unlike everything in `policy` it can never be
-   * overridden per profile — and keeping it separate means switching privacy
-   * preset does not silently reset a network decision the user made once.
+   * overridden per profile. Keeping it separate also means switching privacy
+   * preset does not quietly reset a network decision made once.
    */
   dns: DnsConfig;
   appearance: AppearanceConfig;
@@ -37,7 +37,7 @@ export interface NyacordConfig {
 
 export const CONFIG_VERSION = 1;
 
-export function defaultConfig(): NyacordConfig {
+export function defaultConfig(): NyaConfig {
   return {
     version: CONFIG_VERSION,
     policy: balancedPolicy(),
@@ -58,9 +58,9 @@ export function defaultConfig(): NyacordConfig {
 /**
  * Config on disk is untrusted input: it may be hand-edited, half-written by an
  * older build, or restored from a different machine. Everything is re-validated
- * rather than cast.
+ * instead of cast.
  */
-function sanitize(config: NyacordConfig): NyacordConfig {
+function sanitize(config: NyaConfig): NyaConfig {
   const base = defaultConfig();
   const profiles = Array.isArray(config.profiles)
     ? config.profiles.filter(isPlausibleProfile).map((profile) => ({
@@ -111,8 +111,8 @@ function isPlausibleProfile(value: unknown): value is Profile {
   );
 }
 
-export function openConfig(): JsonStore<NyacordConfig> {
-  const store = new JsonStore<NyacordConfig>(configFile(), defaultConfig);
-  store.replace(sanitize(store.get() as NyacordConfig));
+export function openConfig(): JsonStore<NyaConfig> {
+  const store = new JsonStore<NyaConfig>(configFile(), defaultConfig);
+  store.replace(sanitize(store.get() as NyaConfig));
   return store;
 }

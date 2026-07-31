@@ -115,7 +115,7 @@ describe("normalizeAppearance", () => {
     assert.equal(value.folders[0]?.entries[0]?.id, "ok");
   });
 
-  test("falls back on an unknown tone rather than emitting an unstyled class", () => {
+  test("falls back on an unknown tone instead of emitting an unstyled class", () => {
     const value = normalizeAppearance({ folders: [{ id: "f", name: "F", tone: "neon" }] });
     assert.equal(value.folders[0]?.tone, "violet");
   });
@@ -191,7 +191,7 @@ describe("the folder switcher", () => {
 
   test("reports a count only for folders whose contents we own", () => {
     // The built-in groups are filled by Discord, so a count there would be a
-    // number we do not have rather than a genuine zero.
+    // number we do not have, not a genuine zero.
     const config = normalizeAppearance({
       folders: [
         {

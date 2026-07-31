@@ -1,6 +1,6 @@
 # Roadmap
 
-Honest status. What exists, what does not, and what will never exist.
+What exists, what does not, and what will not.
 
 ## Built and verified
 
@@ -8,8 +8,8 @@ Honest status. What exists, what does not, and what will never exist.
 - Profile system with real Chromium session-partition isolation, plus
   ephemeral profiles
 - Privacy policy engine with three presets and per-profile overrides
-- Request classifier — telemetry, error reporting, trackers, browser services,
-  Ghost Mode, activities, off-platform media
+- Request classifier for telemetry, error reporting, trackers, browser
+  services, Ghost Mode, activities and off-platform media
 - Privacy Inspector with a live, in-memory ledger
 - Permission gating with native prompts and default-deny
 - Navigation containment and external-link handling
@@ -35,7 +35,7 @@ panel opens on the requested pane, the preload bridge exists, profiles are
 created and deleted through the real IPC path, a preset survives a DNS change,
 `/api/v9/science` is refused with `ERR_BLOCKED_BY_CLIENT` and recorded in the
 ledger, `session.resolveProxy` reports Chromium genuinely routing through a
-SOCKS5 proxy while an invalid rule falls back to the system proxy rather than a
+SOCKS5 proxy while an invalid rule falls back to the system proxy and not to a
 direct connection, closing hides the window instead of destroying it, and the
 panel loads with no page errors or CSP violations.
 
@@ -44,8 +44,8 @@ panel loads with no page errors or CSP violations.
 The `unified` layout is the merged, Telegram-style navigation: a small folder
 switcher along the top of the chat column, and below it one list showing only
 the active folder. DMs and Servers are the first two tabs, your own folders
-follow, and a server row reads exactly like a DM row — icon, title, one line —
-until you open it.
+follow, and a server row looks like a DM row (icon, title, one line) until you
+open it.
 
 The switcher is the design. Stacking Direct Messages and Servers on top of each
 other in a single scroll would be two lists sharing a container: more scrolling,
@@ -54,15 +54,15 @@ switch and a remembered active tab, keeps the column short and the current
 context obvious.
 
 None of this touches Discord. It is a rearrangement of navigation inside our own
-window — the same category of change as choosing a different window layout — and
-it involves no injected script, no patched client and no API call. Nothing about
-this layout changes the Terms position described in `docs/RESEARCH.md`.
+window, the same class of change as picking a different window layout. No
+injected script, no patched client, no API call. Nothing here changes the Terms
+position described in `docs/RESEARCH.md`.
 
 **Shipped:** the setting itself (`unified` default, `classic` fallback), the
 switcher with built-in DMs/Servers tabs plus user folders, a remembered active
 tab that survives restarts, the folder model with tones and ordering, folder
-entries validated to Discord channel paths, and navigation — clicking an entry
-moves the active profile to that chat. Entries store a *path*, not a URL, so one
+entries validated to Discord channel paths, and navigation, so clicking an
+entry moves the active profile to that chat. Entries store a *path*, not a URL, so one
 folder works on Stable, PTB and Canary alike.
 
 **Blocked:** automatically populating the list with *your* actual DMs and
@@ -73,26 +73,24 @@ something this project has refused to spend:
 1. **Ask the Discord API with your token.** That is the self-bot signature, and
    the risk lands on the user's account. Rejected in `docs/RESEARCH.md`.
 2. **Read it out of Discord's page.** That means injecting JavaScript into the
-   origin holding your session token — the architecture rejected in
-   `docs/ARCHITECTURE.md`, and the thing that makes "we do not modify Discord"
-   true rather than a slogan.
+   origin holding your session token. That is the architecture rejected in
+   `docs/ARCHITECTURE.md`, and what makes "we do not modify Discord" checkable.
 3. **Have the user curate it.** No enumeration, so no cost. This is what ships:
    you add the chats you care about and get a merged, folder-grouped column over
    them.
 
-Option 3 is genuinely useful and genuinely limited: it is a curated launcher,
-not a mirror of your whole account. Anyone claiming a no-injection client can
-auto-list your servers is either injecting or using the API.
+Option 3 is useful and limited: a curated launcher, not a mirror of your
+account.
 
 Deciding between "keep the guarantee" and "auto-populate the list" is a product
 decision with a security consequence, so it is not one to make quietly. If the
 injection path is ever taken it must be an explicit, off-by-default, clearly
-labelled mode — never the default, and never silent.
+labelled mode. Never the default, never silent.
 
 ## Next
 
 **Global push-to-talk.** The web app's push-to-talk only works while the window
-is focused — a real gap versus the official desktop client.
+is focused, which is a real gap versus the official desktop client.
 
 An earlier draft of this roadmap said `globalShortcut` could fix it. That was
 wrong, and the reason is worth recording so nobody spends a weekend on it:
@@ -102,7 +100,7 @@ wrong, and the reason is worth recording so nobody spends a weekend on it:
 2. Even with both edges, muting the microphone is a page-level action. Chromium
    exposes no per-session microphone mute to the main process
    (`setAudioMuted` is output, not input), so acting on the key would mean
-   reaching into Discord's page — the architecture this project rejects.
+   reaching into Discord's page, the architecture this project rejects.
 
 A correct implementation needs a native global key hook, which costs the
 zero-runtime-dependency property. `webContents.sendInputEvent` can forward
@@ -111,7 +109,7 @@ the *delivery* half is solvable; the *detection* half is not, without a native
 module. Worth doing behind an optional native addon, not worth faking.
 
 **Notification control.** Currently limited to permission gating. Rewriting
-notification bodies — to keep message previews off a lock screen — is not
+notification bodies, to keep message previews off a lock screen, is not
 reachable from the main process: renderer-created `Notification`s have no
 main-process interception hook, so content control would again require page
 injection. Per-profile enable/disable and quiet hours are achievable and are
@@ -126,8 +124,8 @@ the zero-dependency property) or a PipeWire path through
 maintain rule sets the way blocklists are maintained.
 
 **Rule set updates.** Tracker host lists go stale. Any update mechanism must be
-manual or explicitly opt-in — an auto-updating client that phones home for rules
-would contradict the entire point.
+manual or explicitly opt-in. An auto-updating client that phones home for rules
+would contradict the whole exercise.
 
 **Window state per profile.** Zoom level and scroll position currently follow
 the window, not the profile.
@@ -141,8 +139,8 @@ navigation between tabs, and a keyboard-navigable ledger.
 **Plugin and theme JavaScript injection.** This is the line that defines the
 project. Running third-party script inside the origin that holds your session
 token destroys every security property in `docs/SECURITY.md` and is exactly
-what Discord's terms describe. User CSS via `insertCSS` is supported — styles,
-never script — and that is where it stops.
+what Discord's terms describe. User CSS via `insertCSS` is supported: styles,
+never script, and that is where it stops.
 
 **API reimplementation and self-bot features.** Auto-reply, mass actions,
 scraping, anything that makes your token behave like automation. The risk lands
