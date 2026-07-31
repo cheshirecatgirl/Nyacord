@@ -7,7 +7,7 @@ on:
 
 jobs:
   sable:
-    name: Sable — typecheck, test, package
+    name: Sable — typecheck and unit tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -43,3 +43,28 @@ jobs:
             echo "::error::package.json declares $count runtime dependencies; expected 0"
             exit 1
           fi
+
+  e2e:
+    name: Sable — end-to-end
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sable
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: sable/package-lock.json
+
+      # Unlike the unit job this one launches the real app, so it needs the
+      # Electron binary. Chromium's sandbox refuses to run as root; the GitHub
+      # runner is an ordinary user, which is exactly what it wants.
+      - run: npm ci
+
+      - run: sudo apt-get update && sudo apt-get install -y xvfb
+
+      - run: xvfb-run -a npm run test:e2e

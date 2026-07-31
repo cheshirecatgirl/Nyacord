@@ -106,8 +106,12 @@ Requires Node 20+.
 npm install
 npm start          # build and run
 npm test           # 63 unit tests over the pure policy/rule/network modules
+npm run test:e2e   # 16 end-to-end tests that launch the real app
 npm run dist       # package for the current platform
 ```
+
+`test:e2e` needs a display and a non-root user (Chromium's sandbox refuses to
+run as root). On a headless machine, prefix it with `xvfb-run -a`.
 
 ### Portable mode
 

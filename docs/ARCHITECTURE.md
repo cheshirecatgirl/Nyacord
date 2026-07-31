@@ -124,6 +124,29 @@ and `ERR_BLOCKED_BY_CLIENT` are explicitly *not* failures: the first is every
 SPA route change, and the second is our own filter doing its job — retrying it
 would spin forever and inflate the Privacy Inspector's numbers.
 
+## Testing
+
+Two suites, split by what they can actually catch.
+
+**`test/*.test.ts` — unit.** Pure modules only: the policy, the request
+classifier, proxy and DNS validation, user-agent handling, portability. No
+Electron, so they run anywhere in under a second. This is where "we block
+telemetry" stops being a claim and becomes something you can run.
+
+**`test/e2e/*.e2e.ts` — end-to-end.** Launches the real packaged-layout app via
+`playwright-core` and drives it through the actual IPC path.
+
+The split exists because of where the bugs actually were. Every defect found in
+this project so far — a sandboxed preload that could not resolve its imports, a
+panel opening on the wrong pane, a "delete" that deleted only half of what it
+promised, a window that could not be re-shown, a CSP the panel itself violated
+— was invisible to a pure function and only appeared when the app ran. Each of
+those now has a test named after it.
+
+`playwright-core` is used rather than `playwright` specifically because it
+never downloads browsers: the target is Electron, and a browser download would
+be pure cost.
+
 ## Build
 
 - TypeScript compiles `src` and `test` to `dist/`.

@@ -23,14 +23,16 @@ Honest status. What exists, what does not, and what will never exist.
 - Close-to-tray: closing hides the window so the connection and notifications
   survive, and quitting stays explicit
 - 63 unit tests over the pure policy, rule and network modules
+- 16 end-to-end tests that launch the real app, committed and wired into CI
 
-Verified end to end by launching the app under a virtual display: window and
-views come up, the panel opens on the requested pane, profiles are created
-through the real IPC path, presets apply, a request to `/api/v9/science` is
-refused with `ERR_BLOCKED_BY_CLIENT` and recorded in the ledger, and
-`session.resolveProxy` confirms Chromium genuinely routes through a configured
-SOCKS5 proxy while an invalid rule falls back to the system proxy rather than
-to a direct connection.
+The end-to-end suite is the one that matters for regressions: it asserts the
+panel opens on the requested pane, the preload bridge exists, profiles are
+created and deleted through the real IPC path, a preset survives a DNS change,
+`/api/v9/science` is refused with `ERR_BLOCKED_BY_CLIENT` and recorded in the
+ledger, `session.resolveProxy` reports Chromium genuinely routing through a
+SOCKS5 proxy while an invalid rule falls back to the system proxy rather than a
+direct connection, closing hides the window instead of destroying it, and the
+panel loads with no page errors or CSP violations.
 
 ## Next
 

@@ -16,16 +16,17 @@
     "start": "npm run build && electron .",
     "dev": "npm run build && electron . --dev",
     "test": "npm run build && node --test \"dist/test/*.test.js\"",
+    "test:e2e": "npm run build && node --test \"dist/test/e2e/*.e2e.js\"",
     "dist": "npm run build && electron-builder",
     "dist:dir": "npm run build && electron-builder --dir"
   },
-  "dependencies": {},
   "devDependencies": {
     "@electron/fuses": "^2.1.3",
     "@types/node": "^22.10.0",
     "electron": "^43.2.0",
     "electron-builder": "^26.15.3",
     "esbuild": "^0.28.1",
+    "playwright-core": "^1.62.1",
     "typescript": "^5.9.0"
   },
   "build": {
@@ -39,16 +40,26 @@
       "package.json",
       "!**/*.map"
     ],
-    "electronLanguages": ["en-US"],
+    "electronLanguages": [
+      "en-US"
+    ],
     "linux": {
-      "target": ["AppImage", "tar.gz"],
+      "target": [
+        "AppImage",
+        "tar.gz"
+      ],
       "category": "Network;InstantMessaging"
     },
     "win": {
-      "target": ["portable", "nsis"]
+      "target": [
+        "portable",
+        "nsis"
+      ]
     },
     "mac": {
-      "target": ["zip"],
+      "target": [
+        "zip"
+      ],
       "category": "public.app-category.social-networking",
       "hardenedRuntime": true,
       "entitlements": "build/entitlements.mac.plist",
