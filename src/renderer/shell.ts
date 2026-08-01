@@ -9,14 +9,8 @@
  */
 
 import {
-  FOLDER_TONES,
-  MAX_FOLDERS,
-  folderTabs,
-  isDirectMessageTarget,
-  normalizeChatTarget,
+  SIDEBAR_TABS,
   type AppearanceConfig,
-  type ChatFolder,
-  type FolderTone,
   type LayoutMode,
 } from "../common/appearance";
 import { CHANNELS, CHANNEL_IDS } from "../common/channels";
@@ -449,28 +443,22 @@ function mockRow(avatar: string, extra = ""): HTMLDivElement {
   return mock(`mock-row ${extra}`.trim(), mock(`mock-avatar ${avatar}`.trim()), mock("mock-line"));
 }
 
-function mockGroup(): HTMLDivElement {
-  const caret = document.createElement("span");
-  caret.className = "mock-caret";
-  return mock("mock-group", caret, mock("mock-line short bright"));
-}
-
-function mockTab(active: boolean, width: "sm" | "md" | "lg"): HTMLDivElement {
+function mockTab(active: boolean, width: "sm" | "md"): HTMLDivElement {
   return mock(`mock-tab ${width}${active ? " on" : ""}`);
 }
 
 /**
- * The unified column: folder switcher on top, one list below.
+ * The unified column: a two-way switcher on top, one list below.
  *
- * Showing a single folder is what keeps the column short. Stacking both groups
- * in one scroll would just be two lists in one container.
+ * Showing one side at a time is what keeps the column short. Stacking both in
+ * one scroll would be two lists in one container.
  */
 function unifiedMock(): HTMLDivElement {
   return mock(
     "mock",
     mock(
       "mock-col",
-      mock("mock-switcher", mockTab(true, "sm"), mockTab(false, "md"), mockTab(false, "sm"), mockTab(false, "md")),
+      mock("mock-switcher", mockTab(true, "sm"), mockTab(false, "md")),
       mock(
         "mock-list",
         mockRow("violet"),
@@ -486,6 +474,8 @@ function unifiedMock(): HTMLDivElement {
 
 /** Discord's own arrangement: an icon rail, then a separate list. */
 function classicMock(): HTMLDivElement {
+  const caret = document.createElement("span");
+  caret.className = "mock-caret";
   return mock(
     "mock",
     mock(
@@ -494,7 +484,13 @@ function classicMock(): HTMLDivElement {
       mock("mock-avatar amber square"),
       mock("mock-avatar cyan square"),
     ),
-    mock("mock-list", mockGroup(), mockRow("violet"), mockRow("rose", "on"), mockRow("cyan")),
+    mock(
+      "mock-list",
+      mock("mock-group", caret, mock("mock-line short bright")),
+      mockRow("violet"),
+      mockRow("rose", "on"),
+      mockRow("cyan"),
+    ),
     mock("mock-pane"),
   );
 }
@@ -511,28 +507,26 @@ const LAYOUT_CARDS: {
     title: "Unified",
     tag: "Default",
     desc:
-      "One column with a folder switcher on top. DMs, Servers and your folders share the strip; only the active folder is listed.",
+      "One column with a switcher on top. DMs and Servers share the strip, so moving between them is a single click and only one list is on screen.",
     preview: unifiedMock,
   },
   {
     mode: "classic",
     title: "Classic",
     tag: "Discord",
-    desc:
-      "Discord's own arrangement: a server icon rail with a separate channel and DM column.",
+    desc: "Discord's own arrangement: a server icon rail with a separate channel and DM column.",
     preview: classicMock,
   },
 ];
 
 function appearance(): AppearanceConfig {
-  return state?.appearance ?? { layout: "unified", folders: [], activeFolder: "dms" };
+  return state?.appearance ?? { layout: "unified", activeTab: "dms" };
 }
 
-function saveAppearance(next: AppearanceConfig, status?: string): void {
+function saveAppearance(next: AppearanceConfig): void {
   void nya.setAppearance(next).then((stored) => {
     if (state) state = { ...state, appearance: stored };
     renderAppearance();
-    if (status) $("#folder-status").textContent = status;
   });
 }
 
@@ -567,10 +561,9 @@ function renderAppearance(): void {
   const note = $("#layout-note");
   note.classList.toggle("hidden", current.layout === "unified");
   note.textContent =
-    "The switcher and folders belong to the unified layout. They stay saved while Classic is selected.";
+    "The switcher belongs to the unified layout. Your choice stays saved while Classic is selected.";
 
   renderSwitcher(current);
-  renderFolders(current);
 }
 
 /** The switcher itself, built from the same data the layout uses. */
@@ -578,199 +571,17 @@ function renderSwitcher(current: AppearanceConfig): void {
   const strip = $("#switcher");
   strip.textContent = "";
 
-  for (const tab of folderTabs(current)) {
+  for (const tab of SIDEBAR_TABS) {
     const pill = document.createElement("button");
-    const active = tab.id === current.activeFolder;
+    const active = tab.id === current.activeTab;
     pill.className = active ? "pill on" : "pill";
     pill.setAttribute("role", "tab");
     pill.setAttribute("aria-selected", String(active));
-
-    const tone = document.createElement("span");
-    tone.className = `tone ${tab.tone}`;
-    pill.append(tone);
-
-    const label = document.createElement("span");
-    label.textContent = tab.label;
-    pill.append(label);
-
-    // Built-in tabs are filled by Discord, so we have no count to show.
-    if (!tab.builtin) {
-      const count = document.createElement("span");
-      count.className = "count";
-      count.textContent = String(tab.count);
-      pill.append(count);
-    }
-
-    pill.addEventListener("click", () => saveAppearance({ ...current, activeFolder: tab.id }));
+    pill.textContent = tab.label;
+    pill.addEventListener("click", () => saveAppearance({ ...current, activeTab: tab.id }));
     strip.append(pill);
   }
 }
-
-function renderFolders(current: AppearanceConfig): void {
-  const list = $("#folder-list");
-  list.textContent = "";
-
-  if (current.folders.length === 0) {
-    const empty = document.createElement("li");
-    empty.className = "empty";
-    empty.textContent = "No folders yet.";
-    list.append(empty);
-  }
-
-  current.folders.forEach((folder, index) => {
-    const li = document.createElement("li");
-    const head = mock("folder-head");
-
-    const tone = document.createElement("span");
-    tone.className = `tone ${folder.tone}`;
-    head.append(tone);
-
-    const grow = mock("grow");
-    const name = mock("name");
-    name.textContent = folder.name;
-    const sub = mock("sub");
-    sub.textContent = `${folder.entries.length} chat${folder.entries.length === 1 ? "" : "s"}`;
-    grow.append(name, sub);
-    head.append(grow);
-
-    head.append(
-      button("Tone", () => {
-        // The palette is closed, so cycling is quicker than a picker.
-        const next = FOLDER_TONES[(FOLDER_TONES.indexOf(folder.tone) + 1) % FOLDER_TONES.length];
-        update(index, (draft) => {
-          draft.tone = next as FolderTone;
-        });
-      }),
-    );
-    head.append(
-      button("Rename", () => {
-        const value = window.prompt("Folder name", folder.name);
-        if (value) update(index, (draft) => void (draft.name = value));
-      }),
-    );
-    head.append(button("Add chat", () => addEntry(index)));
-    if (index > 0) head.append(button("↑", () => moveFolder(index, -1)));
-    if (index < current.folders.length - 1) head.append(button("↓", () => moveFolder(index, 1)));
-
-    const remove = button("Delete", () => {
-      if (window.confirm(`Delete the folder "${folder.name}"?`)) {
-        saveAppearance({
-          ...current,
-          folders: current.folders.filter((_, i) => i !== index),
-        });
-      }
-    });
-    remove.classList.add("danger");
-    head.append(remove);
-
-    li.append(head);
-
-    if (folder.entries.length > 0) {
-      const entries = document.createElement("ul");
-      entries.className = "folder-entries";
-      folder.entries.forEach((entry, entryIndex) => {
-        const row = document.createElement("li");
-
-        const kind = document.createElement("span");
-        kind.className = "kind";
-        kind.textContent = isDirectMessageTarget(entry.target) ? "DM" : "Server";
-        row.append(kind);
-
-        const grow2 = mock("grow");
-        const entryName = mock("name");
-        entryName.textContent = entry.name;
-        const target = mock("entry-target");
-        target.textContent = entry.target;
-        grow2.append(entryName, target);
-        row.append(grow2);
-
-        row.append(button("Open", () => void nya.openChat(entry.target)));
-        const drop = button("Remove", () =>
-          update(index, (draft) => {
-            draft.entries = draft.entries.filter((_, i) => i !== entryIndex);
-          }),
-        );
-        drop.classList.add("danger");
-        row.append(drop);
-
-        entries.append(row);
-      });
-      li.append(entries);
-    }
-
-    list.append(li);
-  });
-
-  function update(index: number, mutate: (folder: ChatFolder) => void): void {
-    const folders = current.folders.map((folder, i) =>
-      i === index ? { ...folder, entries: [...folder.entries] } : folder,
-    );
-    const target = folders[index];
-    if (!target) return;
-    mutate(target);
-    saveAppearance({ ...current, folders });
-  }
-
-  function moveFolder(index: number, delta: number): void {
-    const folders = [...current.folders];
-    const [moved] = folders.splice(index, 1);
-    if (moved) folders.splice(index + delta, 0, moved);
-    saveAppearance({ ...current, folders });
-  }
-
-  function addEntry(index: number): void {
-    const raw = window.prompt(
-      "Paste a Discord link or channel path\n(e.g. https://discord.com/channels/@me/123)",
-      "",
-    );
-    if (!raw) return;
-
-    // Also validated in main. Checking here lets the message name the problem
-    // instead of the entry quietly disappearing on save.
-    const target = normalizeChatTarget(raw);
-    if (!target) {
-      $("#folder-status").textContent = "That is not a Discord channel link.";
-      return;
-    }
-
-    const name = window.prompt("Name for this chat", isDirectMessageTarget(target) ? "DM" : "Server");
-    if (!name) return;
-
-    update(index, (draft) => {
-      draft.entries = [
-        ...draft.entries,
-        { id: `e${Date.now().toString(36)}`, name, target },
-      ];
-    });
-    $("#folder-status").textContent = "";
-  }
-}
-
-$("#folder-add").addEventListener("click", () => {
-  const current = appearance();
-  if (current.folders.length >= MAX_FOLDERS) {
-    $("#folder-status").textContent = `Limit is ${MAX_FOLDERS} folders.`;
-    return;
-  }
-  const name = window.prompt("Folder name", "New folder");
-  if (!name) return;
-
-  saveAppearance(
-    {
-      ...current,
-      folders: [
-        ...current.folders,
-        {
-          id: `f${Date.now().toString(36)}`,
-          name,
-          tone: FOLDER_TONES[current.folders.length % FOLDER_TONES.length] ?? "violet",
-          entries: [],
-        },
-      ],
-    },
-    "",
-  );
-});
 
 // ---------------------------------------------------------------- inspector
 

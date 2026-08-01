@@ -44,7 +44,6 @@ const api = {
   setAppearance: (appearance: AppearanceConfig): Promise<AppearanceConfig> =>
     ipcRenderer.invoke(IPC.setAppearance, appearance),
 
-  openChat: (target: string): Promise<boolean> => ipcRenderer.invoke(IPC.openChat, target),
 
   getLedger: (profileId?: string): Promise<LedgerSnapshot> =>
     ipcRenderer.invoke(IPC.getLedger, profileId),

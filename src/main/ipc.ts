@@ -2,7 +2,7 @@ import { ipcMain } from "electron";
 
 import { isChannelId } from "../common/channels";
 import { IPC, type CreateProfileRequest } from "../common/ipc";
-import { normalizeAppearance, normalizeChatTarget } from "../common/appearance";
+import { normalizeAppearance } from "../common/appearance";
 import { normalizeDns } from "../common/network";
 import { normalizePolicy, presetPolicy, type PresetName } from "../common/policy";
 import type { NyaConfig } from "./config";
@@ -103,12 +103,6 @@ export function registerIpc(
     // Return the normalized value so the UI can show what was stored. Entries
     // with an unusable target are dropped and that should be visible.
     return next;
-  });
-
-  ipcMain.handle(IPC.openChat, (_event, target: unknown) => {
-    const path = normalizeChatTarget(target);
-    if (!path) return false;
-    return shell.openChat(path);
   });
 
   ipcMain.handle(IPC.setProfileProxy, async (_event, id: unknown, proxy: unknown) => {

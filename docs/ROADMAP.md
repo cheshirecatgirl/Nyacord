@@ -24,10 +24,9 @@ What exists, what does not, and what will not.
   survive, and quitting stays explicit
 - Settings panel with a grouped sidebar: Profiles, Privacy &amp; Security,
   Network, Inspector, Appearance, About
-- Unified/Classic layout setting with live in-panel previews, a folder switcher
-  with a remembered active tab, plus chat folders
-  (see below for exactly how far this goes)
-- 82 unit tests over the pure policy, rule, network and appearance modules
+- Unified/Classic layout setting with live in-panel previews and a switcher
+  with a remembered side (see below for how far this goes)
+- 73 unit tests over the pure policy, rule, network and appearance modules
 - 20 end-to-end tests that launch the real app, committed and wired into CI
 
 The end-to-end suite is the one that matters for regressions: it asserts the
@@ -39,53 +38,37 @@ SOCKS5 proxy while an invalid rule falls back to the system proxy and not to a
 direct connection, closing hides the window instead of destroying it, and the
 panel loads with no page errors or CSP violations.
 
-## The unified layout: what is shipped and what is blocked
+## The unified layout
 
-The `unified` layout is the merged, Telegram-style navigation: a small folder
-switcher along the top of the chat column, and below it one list showing only
-the active folder. DMs and Servers are the first two tabs, your own folders
-follow, and a server row looks like a DM row (icon, title, one line) until you
-open it.
+`unified` puts a two-way switcher along the top of the sidebar and one list
+below it. DMs on one side, Servers on the other, one on screen at a time.
 
-The switcher is the design. Stacking Direct Messages and Servers on top of each
-other in a single scroll would be two lists sharing a container: more scrolling,
-and no clearer sense of where you are. One list at a time, with a one-click
-switch and a remembered active tab, keeps the column short and the current
-context obvious.
+There is no folder model of our own. Discord already has server folders, with
+drag and drop, stored on your account and synced to every device you use. A
+second folder system beside it would be a hand-curated copy of something that
+already works, so the Servers tab shows Discord's own list and its folders come
+with it. Dragging a server into a folder is Discord's interaction, not ours; we
+only have to avoid breaking it.
 
-None of this touches Discord. It is a rearrangement of navigation inside our own
-window, the same class of change as picking a different window layout. No
-injected script, no patched client, no API call. Nothing here changes the Terms
-position described in `docs/RESEARCH.md`.
+That also settles the question of where the list comes from. Discord renders it,
+so nothing has to be enumerated, no API is called, and no script goes into the
+page. The switcher is our own view. Which side of Discord's sidebar is visible
+is decided by a stylesheet injected from the main process, the same thing a
+browser user stylesheet does.
 
-**Shipped:** the setting itself (`unified` default, `classic` fallback), the
-switcher with built-in DMs/Servers tabs plus user folders, a remembered active
-tab that survives restarts, the folder model with tones and ordering, folder
-entries validated to Discord channel paths, and navigation, so clicking an
-entry moves the active profile to that chat. Entries store a *path*, not a URL, so one
-folder works on Stable, PTB and Canary alike.
+The main process knows where you are from the URL alone. `/channels/@me/...`
+is direct messages, `/channels/<id>/...` is a server and names which one, so
+the switcher can follow navigation without reading anything out of the page.
 
-**Blocked:** automatically populating the list with *your* actual DMs and
-servers. Rendering the merged column is easy; knowing what belongs in it is not.
-There are only three ways to learn your guild and DM list, and each one costs
-something this project has refused to spend:
+**What is shipped:** the layout setting, the switcher with a remembered side,
+and the URL-to-context reader that drives it.
 
-1. **Ask the Discord API with your token.** That is the self-bot signature, and
-   the risk lands on the user's account. Rejected in `docs/RESEARCH.md`.
-2. **Read it out of Discord's page.** That means injecting JavaScript into the
-   origin holding your session token. That is the architecture rejected in
-   `docs/ARCHITECTURE.md`, and what makes "we do not modify Discord" checkable.
-3. **Have the user curate it.** No enumeration, so no cost. This is what ships:
-   you add the chats you care about and get a merged, folder-grouped column over
-   them.
-
-Option 3 is useful and limited: a curated launcher, not a mirror of your
-account.
-
-Deciding between "keep the guarantee" and "auto-populate the list" is a product
-decision with a security consequence, so it is not one to make quietly. If the
-injection path is ever taken it must be an explicit, off-by-default, clearly
-labelled mode. Never the default, never silent.
+**What is not:** the stylesheet layer that actually toggles Discord's sidebar.
+Discord's class names are hashed and change often, so those selectors need
+tuning against a live session and will need re-tuning after redesigns. The
+stylesheet is meant to live in the data directory where it can be edited
+without a release. When it stops matching, both tabs fall back to looking like
+ordinary Discord, which is degraded but perfectly usable.
 
 ## Next
 

@@ -237,38 +237,19 @@ describe("appearance", () => {
     await until(async () => (await state()).appearance.layout === "unified");
   });
 
-  test("stores folders and normalizes entry targets", async () => {
+  test("remembers which side of the switcher is showing", async () => {
     const stored = await panel.evaluate(() =>
-      window.nya.setAppearance({
-        layout: "unified",
-        activeFolder: "work",
-        folders: [
-          {
-            id: "work",
-            name: "Work",
-            tone: "green",
-            entries: [
-              { id: "a", name: "Standup", target: "https://canary.discord.com/channels/1/2" },
-              { id: "b", name: "Elsewhere", target: "https://evil.example/channels/1/2" },
-            ],
-          },
-        ],
-      }),
+      window.nya.setAppearance({ layout: "unified", activeTab: "servers" }),
     );
-
-    assert.equal(stored.folders.length, 1);
-    // The off-platform entry is dropped, and the channel-specific URL is
-    // reduced to a path so the folder works on any release channel.
-    assert.equal(stored.folders[0]?.entries.length, 1);
-    assert.equal(stored.folders[0]?.entries[0]?.target, "/channels/1/2");
-    // The remembered tab survives the round-trip, which is what makes the
-    // switcher keep your place across restarts.
-    assert.equal(stored.activeFolder, "work");
+    assert.equal(stored.activeTab, "servers");
+    assert.equal((await state()).appearance.activeTab, "servers");
   });
 
-  test("refuses to navigate to a target outside Discord", async () => {
-    assert.equal(await panel.evaluate(() => window.nya.openChat("https://evil.example/x")), false);
-    assert.equal(await panel.evaluate(() => window.nya.openChat("/not/a/channel")), false);
+  test("refuses a tab it does not know", async () => {
+    const stored = await panel.evaluate(() =>
+      window.nya.setAppearance({ layout: "unified", activeTab: "nonsense" } as never),
+    );
+    assert.equal(stored.activeTab, "dms");
   });
 });
 

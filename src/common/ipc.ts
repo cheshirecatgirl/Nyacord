@@ -28,7 +28,6 @@ export const IPC = {
   setProfileProxy: "nya:set-profile-proxy",
   setDns: "nya:set-dns",
   setAppearance: "nya:set-appearance",
-  openChat: "nya:open-chat",
   getLedger: "nya:get-ledger",
   clearLedger: "nya:clear-ledger",
   closePanel: "nya:close-panel",
