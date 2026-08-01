@@ -29,6 +29,11 @@
     "playwright-core": "^1.62.1",
     "typescript": "^5.9.0"
   },
+  "author": "cheshirecatgirl",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cheshirecatgirl/Nyacord.git"
+  },
   "build": {
     "appId": "app.nyacord.desktop",
     "productName": "Nyacord",
@@ -64,6 +69,10 @@
       "hardenedRuntime": true,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist"
+    },
+    "directories": {
+      "output": "release",
+      "buildResources": "assets"
     }
   }
 }
