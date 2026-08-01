@@ -588,6 +588,17 @@ select:focus-visible {
   background: #17181c;
 }
 
+.path {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  color: var(--muted);
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  word-break: break-all;
+}
+
 /* --------------------------------------------------------------- switcher */
 
 /* Kept quiet: it sits above the chat list all day. */

@@ -69,6 +69,7 @@ export interface AppState {
   readonly portable: boolean;
   readonly portableReason: string;
   readonly dataDir: string;
+  readonly layoutStylesheet: string;
   readonly policy: PrivacyPolicy;
   readonly dns: DnsConfig;
   readonly appearance: AppearanceConfig;

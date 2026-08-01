@@ -1,9 +1,11 @@
 import { app, net, powerMonitor } from "electron";
+import { join } from "node:path";
 
 import { openConfig } from "./config";
 import { registerIpc } from "./ipc";
 import { buildMenu } from "./menu";
 import { initializePaths, pathDecision, dataRoot } from "./paths";
+import { LayoutStyles } from "./layout";
 import { PrivacyLedger } from "./privacy/ledger";
 import { ProfileStore } from "./profiles";
 import { applyChromiumSwitches } from "./switches";
@@ -65,14 +67,18 @@ app.whenReady().then(() => {
   const ledger = new PrivacyLedger();
   const profiles = new ProfileStore(config);
   const decision = pathDecision();
+  const layoutStyles = new LayoutStyles(
+    join(__dirname, "..", "..", "..", "assets", "layout", "unified.css"),
+  );
 
-  shell = new AppShell(config, profiles, ledger, {
+  shell = new AppShell(config, profiles, ledger, layoutStyles, {
     version: app.getVersion(),
     electron: process.versions.electron ?? "unknown",
     chrome: process.versions.chrome ?? "unknown",
     portable: decision.portable,
     portableReason: decision.reason,
     dataDir: dataRoot(),
+    layoutStylesheet: layoutStyles.path,
     devMode,
   });
 
@@ -110,6 +116,7 @@ app.whenReady().then(() => {
     clearInterval(netPoll);
     // Let the window actually close this time; it hides on close otherwise.
     shell?.releaseForQuit();
+    layoutStyles.dispose();
     config.flush();
     tray?.destroy();
   });

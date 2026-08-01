@@ -564,6 +564,11 @@ function renderAppearance(): void {
     "The switcher belongs to the unified layout. Your choice stays saved while Classic is selected.";
 
   renderSwitcher(current);
+
+  // The stylesheet needs editing whenever Discord changes its markup, so the
+  // path has to be findable without digging through the data directory.
+  const path = $("#layout-css-path");
+  path.textContent = state?.layoutStylesheet ?? "";
 }
 
 /** The switcher itself, built from the same data the layout uses. */

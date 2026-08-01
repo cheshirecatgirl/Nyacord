@@ -1,0 +1,118 @@
+/*
+ * Nyacord unified layout.
+ *
+ * This file is yours. It is copied into your data directory on first run and
+ * reloaded the moment you save it, so you can tune selectors with DevTools
+ * open and see the result without restarting or rebuilding.
+ *
+ *   Path:  Settings > Appearance > Stylesheet
+ *
+ * ---------------------------------------------------------------------------
+ * WHY IT NEEDS TUNING
+ *
+ * Discord's class names are content hashes: `sidebar_a1b2c3`. They change on
+ * essentially every deploy and differ between Stable, PTB and Canary, so no
+ * stylesheet written in advance can name them correctly. The selectors below
+ * match on the parts that are stable because they are functional:
+ *
+ *   [class*="name_"]  the prefix survives the hash changing. Older builds used
+ *                     a hyphen (`name-a1b2c3`), so both are matched.
+ *   [data-list-*]     Discord's own list virtualisation attributes
+ *   [aria-label]      presence only, never the value
+ *
+ * Never match an aria-label's *value*. It is translated, so
+ * `[aria-label="Servers"]` silently does nothing for anyone not using English.
+ *
+ * ---------------------------------------------------------------------------
+ * IS IT WORKING?
+ *
+ * Open DevTools on the Discord view and run:
+ *
+ *   getComputedStyle(document.documentElement).getPropertyValue('--nya-side')
+ *
+ * "dms" or "servers" means this file is applied and the switcher is driving
+ * it. Empty means nothing was injected. If it reports a side but the layout
+ * has not changed, the selectors below stopped matching: inspect the sidebar
+ * and update them.
+ *
+ * ---------------------------------------------------------------------------
+ * WHAT NOT TO DO
+ *
+ * Server folders and their drag and drop are Discord's own. Do not add
+ * `pointer-events`, `position` or `transform` to guild items or their
+ * containers; those are what break dragging. Width, padding, colour and
+ * generated content are safe.
+ */
+
+/* [shared] */
+
+:root {
+  --nya-layout: unified;
+}
+
+/*
+ * Room for the switcher strip, which is a separate view pinned over the top of
+ * the sidebar. Without this, Discord's own content sits underneath it.
+ */
+[class*="guilds_"],
+[class*="guilds-"],
+[class*="sidebar_"],
+[class*="sidebar-"] {
+  padding-top: var(--nya-switcher-height, 40px) !important;
+}
+
+/* [dms] */
+
+:root {
+  --nya-side: dms;
+}
+
+/* The server rail goes away, leaving the private channel list as the column. */
+[class*="guilds_"],
+[class*="guilds-"] {
+  display: none !important;
+}
+
+/* [servers] */
+
+:root {
+  --nya-side: servers;
+}
+
+/*
+ * The rail widens into rows so a server reads like a chat.
+ *
+ * The name comes from the item's own aria-label, drawn as generated content. A
+ * pseudo-element cannot be a drop target, so this does not interfere with
+ * dragging a server into a folder.
+ *
+ * If your build has no aria-label on the guild items, delete the ::after rule
+ * and you still get a widened rail with icons.
+ */
+[class*="guilds_"],
+[class*="guilds-"] {
+  width: 240px !important;
+}
+
+[data-list-item-id*="guildsnav"] {
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+}
+
+[data-list-item-id*="guildsnav"] [aria-label]::after {
+  content: attr(aria-label);
+  margin-left: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--interactive-normal, #b5bac1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* With a server open its channel list is the useful column, so keep that. */
+[class*="privateChannels_"],
+[class*="privateChannels-"] {
+  display: none !important;
+}

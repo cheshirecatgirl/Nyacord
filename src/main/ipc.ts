@@ -99,6 +99,7 @@ export function registerIpc(
     config.update((draft) => {
       draft.appearance = next;
     });
+    shell.applyLayout();
     shell.pushState();
     // Return the normalized value so the UI can show what was stored. Entries
     // with an unusable target are dropped and that should be visible.

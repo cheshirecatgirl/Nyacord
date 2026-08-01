@@ -26,7 +26,7 @@ What exists, what does not, and what will not.
   Network, Inspector, Appearance, About
 - Unified/Classic layout setting with live in-panel previews and a switcher
   with a remembered side (see below for how far this goes)
-- 73 unit tests over the pure policy, rule, network and appearance modules
+- 81 unit tests over the pure policy, rule, network, appearance and stylesheet modules
 - 20 end-to-end tests that launch the real app, committed and wired into CI
 
 The end-to-end suite is the one that matters for regressions: it asserts the
@@ -60,15 +60,30 @@ The main process knows where you are from the URL alone. `/channels/@me/...`
 is direct messages, `/channels/<id>/...` is a server and names which one, so
 the switcher can follow navigation without reading anything out of the page.
 
-**What is shipped:** the layout setting, the switcher with a remembered side,
-and the URL-to-context reader that drives it.
+**Shipped and verified:** the layout setting, the switcher with a remembered
+side, the URL-to-context reader, and the whole injection path. The stylesheet
+is seeded into the data directory, injected on the profile view, swapped when
+the side changes, removed under Classic, and reloaded when the file is saved.
+All of that is checked against a running app.
 
-**What is not:** the stylesheet layer that actually toggles Discord's sidebar.
-Discord's class names are hashed and change often, so those selectors need
-tuning against a live session and will need re-tuning after redesigns. The
-stylesheet is meant to live in the data directory where it can be edited
-without a release. When it stops matching, both tabs fall back to looking like
-ordinary Discord, which is degraded but perfectly usable.
+**Not verified, and cannot be from a machine that cannot reach Discord:**
+whether the selectors match. Discord's class names are hashes that change on
+every deploy and differ per release channel, so the shipped rules are a
+starting point, not an answer.
+
+The stylesheet reports its own state to make that easy to tell apart. In
+DevTools on the Discord view:
+
+```js
+getComputedStyle(document.documentElement).getPropertyValue("--nya-side")
+```
+
+`dms` or `servers` means the file is applied and the switcher is driving it, so
+any remaining problem is in the selectors. Empty means nothing was injected,
+which is a different bug.
+
+When the selectors stop matching, both sides fall back to looking like ordinary
+Discord. Degraded, never broken.
 
 ## Next
 

@@ -11,6 +11,7 @@ import type { PrivacyLedger } from "./privacy/ledger";
 import { ViewWatchdog } from "./reliability/watchdog";
 import { normalizeProxy, type ProxyConfig } from "../common/network";
 import { containNavigation, freezeNavigation } from "./security/navigation";
+import type { LayoutStyles } from "./layout";
 import { applyProxy, configureSession, wipeSessionData } from "./security/session";
 import type { JsonStore } from "./store";
 
@@ -44,6 +45,8 @@ interface ProfileView {
   readonly view: WebContentsView;
   readonly watchdog: ViewWatchdog;
   badge: number;
+  /** Handle for the injected layout stylesheet, so it can be swapped out. */
+  cssKey: string | null;
 }
 
 /**
@@ -62,6 +65,8 @@ export interface RuntimeInfo {
   readonly portable: boolean;
   readonly portableReason: string;
   readonly dataDir: string;
+  /** Where the editable unified-layout stylesheet lives. */
+  readonly layoutStylesheet: string;
   readonly devMode: boolean;
 }
 
@@ -77,6 +82,7 @@ export class AppShell {
     private readonly config: JsonStore<NyaConfig>,
     private readonly profiles: ProfileStore,
     private readonly ledger: PrivacyLedger,
+    private readonly layoutStyles: LayoutStyles,
     private readonly info: RuntimeInfo,
   ) {
     const bounds = this.config.get().window;
@@ -119,6 +125,48 @@ export class AppShell {
     nativeTheme.on("updated", () => this.applyTheme());
 
     this.ledger.onChange(() => this.pushLedger());
+
+    // Editing the stylesheet should show up without a restart.
+    this.layoutStyles.onChange(() => this.applyLayout());
+  }
+
+  /**
+   * Puts the unified layout's stylesheet on every profile view, or takes it
+   * off under Classic.
+   *
+   * Switching sides cannot set a class on Discord's page without running
+   * script in it, so each side is a different stylesheet and the previous one
+   * is removed. This is a user stylesheet, the same thing a browser extension
+   * applies; nothing is executed.
+   */
+  applyLayout(): void {
+    for (const entry of this.views.values()) void this.applyLayoutTo(entry);
+  }
+
+  private async applyLayoutTo(entry: ProfileView): Promise<void> {
+    const contents = entry.view.webContents;
+    if (contents.isDestroyed()) return;
+
+    if (entry.cssKey) {
+      try {
+        await contents.removeInsertedCSS(entry.cssKey);
+      } catch {
+        // The key goes stale after a full page load; inserting again is enough.
+      }
+      entry.cssKey = null;
+    }
+
+    const { layout, activeTab } = this.config.get().appearance;
+    if (layout !== "unified") return;
+
+    const css = this.layoutStyles.css(activeTab);
+    if (!css) return;
+
+    try {
+      entry.cssKey = await contents.insertCSS(css);
+    } catch (error) {
+      console.error("[nya] could not apply the layout stylesheet:", error);
+    }
   }
 
   private applyTheme(): void {
@@ -206,7 +254,14 @@ export class AppShell {
       onDegraded: (cause) => console.warn(`[nya] ${profile.name}: ${cause}`),
     });
 
-    const entry: ProfileView = { profile, view, watchdog, badge: -1 };
+    const entry: ProfileView = { profile, view, watchdog, badge: -1, cssKey: null };
+
+    // Inserted CSS does not survive a full page load, so it goes back on every
+    // time the document is replaced. SPA route changes keep it.
+    view.webContents.on("did-finish-load", () => {
+      entry.cssKey = null;
+      void this.applyLayoutTo(entry);
+    });
 
     // Discord writes the unread count into the document title. Reading it is
     // free and needs no script injection.

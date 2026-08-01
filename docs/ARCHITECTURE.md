@@ -67,6 +67,8 @@ cannot point a profile at an attacker-chosen partition.
 | `src/common/ua.ts` | User-agent and client-hint normalization |
 | `src/common/network.ts` | Proxy and secure-DNS configuration and validation |
 | `src/common/appearance.ts` | Layout mode, switcher state, and URL-to-context reading |
+| `src/common/stylesheet.ts` | Splits the layout stylesheet into its per-side sections |
+| `src/main/layout.ts` | Seeds, reads and watches the editable layout stylesheet |
 | `src/common/portable.ts` | Where state should live |
 | `src/common/ipc.ts` | The complete IPC surface, in one file |
 | `src/main/config.ts` | On-disk shape, re-validated on load. Holds the global DNS setting, which is not part of `policy` because the host resolver is process-wide and can never be per-profile |

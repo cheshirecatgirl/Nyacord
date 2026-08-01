@@ -105,7 +105,7 @@ Needs Node 20 or newer.
 ```bash
 npm install
 npm start          # build and run
-npm test           # 73 unit tests over the pure modules
+npm test           # 81 unit tests over the pure modules
 npm run test:e2e   # 20 end-to-end tests against the real app
 npm run dist       # package for the current platform
 ```
