@@ -37,10 +37,16 @@ chat client.
 
 ## The IPC surface
 
-The complete list of privileged operations is `src/common/ipc.ts`. The preload
-exposes exactly those as named, fixed-arity functions. There is deliberately no
+The complete list of privileged operations is `src/common/ipc.ts`. The preloads
+expose exactly those as named, fixed-arity functions. There is deliberately no
 generic `invoke(channel, …)` escape hatch, so the privileged surface is
 reviewable as a diff.
+
+There are two bridges, and they are not the same size. The settings panel gets
+the full list. The switcher strip, which is the one view of ours that sits over
+Discord's page all the time, gets two methods: move to a named side, and be told
+which side is showing. It cannot read the ledger, touch policy, or change the
+layout mode.
 
 Every handler in `src/main/ipc.ts` treats its argument as hostile: channel ids
 are checked against a known set, policies go through `normalizePolicy`, and

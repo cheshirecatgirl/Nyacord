@@ -2,7 +2,7 @@ import { ipcMain } from "electron";
 
 import { isChannelId } from "../common/channels";
 import { IPC, type CreateProfileRequest } from "../common/ipc";
-import { normalizeAppearance } from "../common/appearance";
+import { isSidebarTab, normalizeAppearance } from "../common/appearance";
 import { normalizeDns } from "../common/network";
 import { normalizePolicy, presetPolicy, type PresetName } from "../common/policy";
 import type { NyaConfig } from "./config";
@@ -104,6 +104,14 @@ export function registerIpc(
     // Return the normalized value so the UI can show what was stored. Entries
     // with an unusable target are dropped and that should be visible.
     return next;
+  });
+
+  // The switcher strip's only capability. Narrower than setAppearance on
+  // purpose: the strip can move between sides, not change the layout mode.
+  ipcMain.handle(IPC.setActiveTab, (_event, tab: unknown, restoreFocus: unknown) => {
+    if (!isSidebarTab(tab)) return false;
+    shell.setActiveTab(tab, restoreFocus === true);
+    return true;
   });
 
   ipcMain.handle(IPC.setProfileProxy, async (_event, id: unknown, proxy: unknown) => {

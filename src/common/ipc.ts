@@ -9,7 +9,7 @@
  * The Discord view has no preload at all, so it cannot reach any of this.
  */
 
-import type { AppearanceConfig } from "./appearance";
+import type { AppearanceConfig, SidebarTabId } from "./appearance";
 import type { ChannelId } from "./channels";
 import type { DnsConfig } from "./network";
 import type { PrivacyPolicy } from "./policy";
@@ -28,6 +28,7 @@ export const IPC = {
   setProfileProxy: "nya:set-profile-proxy",
   setDns: "nya:set-dns",
   setAppearance: "nya:set-appearance",
+  setActiveTab: "nya:set-active-tab",
   getLedger: "nya:get-ledger",
   clearLedger: "nya:clear-ledger",
   closePanel: "nya:close-panel",
@@ -37,7 +38,21 @@ export const IPC = {
   stateChanged: "nya:state-changed",
   ledgerChanged: "nya:ledger-changed",
   showPane: "nya:show-pane",
+  switcherState: "nya:switcher-state",
 } as const;
+
+/**
+ * Everything the switcher strip is allowed to know.
+ *
+ * Deliberately not `AppState`. The strip sits over Discord's own sidebar and
+ * needs two facts to draw itself, so it gets two facts; profiles, policy and
+ * the ledger stay on the settings panel's side of the bridge.
+ */
+export interface SwitcherState {
+  readonly activeTab: SidebarTabId;
+  /** Whether to draw for a dark surface. The strip's background is the page. */
+  readonly dark: boolean;
+}
 
 export type PaneId =
   | "profiles"

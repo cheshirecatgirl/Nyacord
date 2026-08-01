@@ -37,6 +37,18 @@ export function isSidebarTab(value: unknown): value is SidebarTabId {
   return value === "dms" || value === "servers";
 }
 
+/**
+ * The strip's size, in device-independent pixels.
+ *
+ * The strip is a real view pinned over the top of the sidebar, so these numbers
+ * also decide how much room the stylesheet has to reserve and how wide the
+ * server rail has to widen to. They are handed to the stylesheet as custom
+ * properties rather than written into it twice, because a strip that is 40px
+ * tall over a 32px gap is a visible seam.
+ */
+export const SWITCHER_HEIGHT = 40;
+export const SWITCHER_WIDTH = 240;
+
 export interface AppearanceConfig {
   layout: LayoutMode;
   /**

@@ -24,10 +24,11 @@ What exists, what does not, and what will not.
   survive, and quitting stays explicit
 - Settings panel with a grouped sidebar: Profiles, Privacy &amp; Security,
   Network, Inspector, Appearance, About
-- Unified/Classic layout setting with live in-panel previews and a switcher
-  with a remembered side (see below for how far this goes)
+- Unified/Classic layout setting with live in-panel previews, and a switcher
+  strip pinned over the sidebar with a remembered side (see below for how far
+  this goes)
 - 81 unit tests over the pure policy, rule, network, appearance and stylesheet modules
-- 20 end-to-end tests that launch the real app, committed and wired into CI
+- 26 end-to-end tests that launch the real app, committed and wired into CI
 
 The end-to-end suite is the one that matters for regressions: it asserts the
 panel opens on the requested pane, the preload bridge exists, profiles are
@@ -35,8 +36,10 @@ created and deleted through the real IPC path, a preset survives a DNS change,
 `/api/v9/science` is refused with `ERR_BLOCKED_BY_CLIENT` and recorded in the
 ledger, `session.resolveProxy` reports Chromium genuinely routing through a
 SOCKS5 proxy while an invalid rule falls back to the system proxy and not to a
-direct connection, closing hides the window instead of destroying it, and the
-panel loads with no page errors or CSP violations.
+direct connection, clicking the switcher strip swaps the stylesheet Discord's
+page is actually running, the gap that stylesheet reserves matches the strip's
+real height, closing hides the window instead of destroying it, and both of our
+pages load with no page errors or CSP violations.
 
 ## The unified layout
 
@@ -52,19 +55,27 @@ only have to avoid breaking it.
 
 That also settles the question of where the list comes from. Discord renders it,
 so nothing has to be enumerated, no API is called, and no script goes into the
-page. The switcher is our own view. Which side of Discord's sidebar is visible
-is decided by a stylesheet injected from the main process, the same thing a
+page. The switcher is our own view, 240×40, pinned over space the stylesheet
+reserves at the top of the sidebar. Which side of Discord's sidebar is visible
+is decided by that stylesheet, injected from the main process, the same thing a
 browser user stylesheet does.
+
+The strip's page is transparent, so what shows between the pills is Discord's
+own sidebar. That is not only cosmetic: it means the strip matches whatever
+theme you are using without ever reading one.
 
 The main process knows where you are from the URL alone. `/channels/@me/...`
 is direct messages, `/channels/<id>/...` is a server and names which one, so
-the switcher can follow navigation without reading anything out of the page.
+the strip follows navigation without reading anything out of the page. Opening
+a DM from a notification moves it to the DMs side on its own.
 
-**Shipped and verified:** the layout setting, the switcher with a remembered
-side, the URL-to-context reader, and the whole injection path. The stylesheet
-is seeded into the data directory, injected on the profile view, swapped when
-the side changes, removed under Classic, and reloaded when the file is saved.
-All of that is checked against a running app.
+**Shipped and verified:** the layout setting, the strip, the remembered side,
+the URL-to-context reader, and the whole injection path. The stylesheet is
+seeded into the data directory, injected on the profile view, swapped when the
+side changes, removed under Classic, and reloaded when the file is saved. The
+strip is attached under Unified and detached under Classic, and the gap it fills
+is measured against its real height rather than written down twice. All of that
+is checked against a running app.
 
 **Not verified, and cannot be from a machine that cannot reach Discord:**
 whether the selectors match. Discord's class names are hashes that change on
@@ -128,9 +139,10 @@ would contradict the whole exercise.
 **Window state per profile.** Zoom level and scroll position currently follow
 the window, not the profile.
 
-**Accessibility pass.** The tab list now carries `role="tablist"` and
-`aria-selected`. Still missing: focus trapping while the panel is open, arrow-key
-navigation between tabs, and a keyboard-navigable ledger.
+**Accessibility pass.** Both tab lists carry `role="tablist"` and
+`aria-selected`, and the switcher strip takes arrow keys with a single tab stop.
+Still missing: the same arrow-key handling on the settings sidebar, focus
+trapping while the panel is open, and a keyboard-navigable ledger.
 
 ## Out of scope, permanently
 

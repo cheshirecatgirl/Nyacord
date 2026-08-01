@@ -12,9 +12,10 @@ cannot see or subvert it.
 main process  ── privileged. Owns config, policy, sessions, filtering.
    │
    └── BaseWindow
-        ├── WebContentsView  (profile "work"   → persist:nyacord-a1b2)  ← Discord, NO preload
-        ├── WebContentsView  (profile "canary" → persist:nyacord-c3d4)  ← Discord, NO preload
-        └── WebContentsView  (shell UI, file://, partition "nyacord-shell") ← our settings panel
+        ├── WebContentsView  (profile "work"   → persist:nya-a1b2)  ← Discord, NO preload
+        ├── WebContentsView  (profile "canary" → persist:nya-c3d4)  ← Discord, NO preload
+        ├── WebContentsView  (switcher strip, file://, partition "nya-shell") ← 240×40, top-left
+        └── WebContentsView  (shell UI,       file://, partition "nya-shell") ← settings panel
 ```
 
 Only one profile view is attached to the window at a time; switching profiles
@@ -23,6 +24,14 @@ profiles keep their gateway connection and unread state.
 
 The shell view is added on top when the panel opens and removed when it closes.
 It is transparent, so Discord stays visible behind it.
+
+The switcher strip is the unified layout's only UI. It is a real view pinned to
+the top-left corner, over space the layout stylesheet reserves at the top of
+Discord's sidebar, and it is attached only while that layout is selected. It is
+transparent too, which is what lets it inherit Discord's theme: what shows
+between the pills is Discord's own sidebar, so the strip never has to learn
+which theme is in use. Both overlays are re-raised after any view is mounted
+underneath them, because `addChildView` moves an existing child to the front.
 
 ### Why the Discord view has no preload
 
@@ -75,8 +84,10 @@ cannot point a profile at an attacker-chosen partition.
 | `src/main/security/` | Session hardening, permissions, navigation containment |
 | `src/main/privacy/ledger.ts` | The Privacy Inspector's in-memory record |
 | `src/main/reliability/` | Crash, hang and network recovery |
-| `src/preload/shell.ts` | The only bridge, attached only to our own UI |
-| `src/renderer/` | The settings panel. No `innerHTML` anywhere. |
+| `src/preload/shell.ts` | The settings panel's bridge. Attached only to our own UI |
+| `src/preload/switcher.ts` | The strip's bridge: two methods, the smallest surface in the app |
+| `src/renderer/shell.*` | The settings panel. No `innerHTML` anywhere. |
+| `src/renderer/switcher.*` | The switcher strip |
 
 The `common` / `main` split is load-bearing. Everything deciding *what the
 client does* lives in `common` and is tested without launching Electron.

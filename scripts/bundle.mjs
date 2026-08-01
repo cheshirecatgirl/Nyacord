@@ -24,27 +24,30 @@ const common = {
   logLevel: "warning",
 };
 
-await Promise.all([
-  build({
-    ...common,
-    entryPoints: [src("preload", "shell.ts")],
-    outfile: out("preload", "shell.js"),
-    format: "cjs",
-    platform: "node",
-    target: "node20",
-    // Provided by the sandboxed preload environment, never bundled.
-    external: ["electron"],
-  }),
-  build({
-    ...common,
-    entryPoints: [src("renderer", "shell.ts")],
-    outfile: out("renderer", "shell.js"),
-    // IIFE, not CJS: the panel is loaded as a classic <script>, where a CJS
-    // bundle's top-level `var` declarations become properties of `window`.
-    // That collides with the contextBridge-exposed `window.nyacord`, which is
-    // read-only, and throws before any UI renders.
-    format: "iife",
-    platform: "browser",
-    target: "chrome120",
-  }),
-]);
+const preload = (name) => ({
+  ...common,
+  entryPoints: [src("preload", `${name}.ts`)],
+  outfile: out("preload", `${name}.js`),
+  format: "cjs",
+  platform: "node",
+  target: "node20",
+  // Provided by the sandboxed preload environment, never bundled.
+  external: ["electron"],
+});
+
+const renderer = (name) => ({
+  ...common,
+  entryPoints: [src("renderer", `${name}.ts`)],
+  outfile: out("renderer", `${name}.js`),
+  // IIFE, not CJS: these are loaded as classic <script>s, where a CJS bundle's
+  // top-level `var` declarations become properties of `window`. That collides
+  // with the contextBridge-exposed bridge, which is read-only, and throws
+  // before any UI renders.
+  format: "iife",
+  platform: "browser",
+  target: "chrome120",
+});
+
+await Promise.all(
+  [preload("shell"), preload("switcher"), renderer("shell"), renderer("switcher")].map(build),
+);

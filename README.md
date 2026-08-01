@@ -57,12 +57,13 @@ the right unit: send one identity over Tor or a VPN and leave another direct.
 DNS-over-HTTPS keeps your network operator from seeing a plaintext list of the
 hosts you contact.
 
-**A merged DM and server list.** `Unified` (the default) puts a switcher above
-one chat list, the way Telegram does: DMs on one side, Servers on the other, one
-on screen at a time, and the side you were on survives a restart. `Classic`
-gives you Discord's normal layout. Server folders and their drag and drop are
-Discord's own, so they keep working and stay synced to your account. Nothing is
-injected into Discord. See
+**A merged DM and server list.** `Unified` (the default) puts a small switcher
+strip above one chat list, the way Telegram does: DMs on one side, Servers on the
+other, one on screen at a time. The side you were on survives a restart, and
+opening a DM from a notification moves the strip to it. `Classic` gives you
+Discord's normal layout. Server folders and their drag and drop are Discord's
+own, so they keep working and stay synced to your account. Nothing is injected
+into Discord: the strip is our own view and the rest is a stylesheet. See
 [how far this goes](docs/ROADMAP.md#the-unified-layout).
 
 **Portable.** Drop a `nyacord-data` directory next to the executable and
@@ -106,7 +107,7 @@ Needs Node 20 or newer.
 npm install
 npm start          # build and run
 npm test           # 81 unit tests over the pure modules
-npm run test:e2e   # 20 end-to-end tests against the real app
+npm run test:e2e   # 26 end-to-end tests against the real app
 npm run dist       # package for the current platform
 ```
 

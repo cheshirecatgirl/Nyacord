@@ -26,11 +26,13 @@ import { _electron as electron, type ElectronApplication, type Page } from "play
 import type { AppState } from "../../src/common/ipc";
 import type { DnsConfig, ProxyConfig } from "../../src/common/network";
 import type { NyaApi } from "../../src/preload/shell";
+import type { NyaSwitcherApi } from "../../src/preload/switcher";
 
 declare global {
-  // The bridge the preload installs, as the panel's own scripts see it.
+  // The bridges the preloads install, as each page's own scripts see them.
   interface Window {
     nya: NyaApi;
+    nyaSwitcher: NyaSwitcherApi;
   }
 }
 
@@ -49,16 +51,29 @@ const pageProblems: string[] = [];
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * The Discord view as seen from inside a main-process `evaluate`. Electron's
+ * A child view as seen from inside a main-process `evaluate`. Electron's
  * `View` type does not expose `webContents`, and the callback is compiled here
  * not where it runs.
  */
 interface MainView {
   webContents: {
+    getURL(): string;
     loadURL(url: string): Promise<void>;
+    executeJavaScript(code: string): Promise<unknown>;
     session: { resolveProxy(url: string): Promise<string> };
   };
 }
+
+/**
+ * The Discord view is picked out of the window's children by being the only one
+ * that is not a `file://` page of ours. Indexing used to be enough, but the
+ * window now also holds the switcher strip, and views change order as they are
+ * raised over each other.
+ *
+ * The predicate is repeated at each call site rather than shared, because
+ * `app.evaluate` ships only the callback's own source to the main process and
+ * nothing it closes over comes with it.
+ */
 
 /** Polls until `check` returns something truthy, so tests do not race the UI. */
 async function until<T>(check: () => Promise<T> | T, timeoutMs = 15_000): Promise<NonNullable<T>> {
@@ -253,11 +268,101 @@ describe("appearance", () => {
   });
 });
 
+describe("switcher strip", () => {
+  /** What the injected stylesheet reports about itself, read off the page. */
+  function marker(name: string): Promise<string> {
+    return app.evaluate(({ BaseWindow }, property) => {
+      const view = (
+        BaseWindow.getAllWindows()[0]?.contentView.children as unknown as MainView[]
+      ).find((child) => !(child.webContents?.getURL() ?? "file://").startsWith("file://"));
+      if (!view) throw new Error("no Discord view");
+      return view.webContents.executeJavaScript(
+        `getComputedStyle(document.documentElement).getPropertyValue(${JSON.stringify(property)}).trim()`,
+      ) as Promise<string>;
+    }, name) as Promise<string>;
+  }
+
+  /** The strip's own page, which Playwright sees as another window. */
+  function stripPage(): Promise<Page> {
+    return until(() => app.windows().find((page) => page.url().includes("switcher.html")));
+  }
+
+  test("exists as a real view under the unified layout", async () => {
+    await panel.evaluate(() => window.nya.setAppearance({ layout: "unified", activeTab: "dms" }));
+    const strip = await stripPage();
+    // Two pills, drawn from the same SIDEBAR_TABS the injection uses.
+    assert.deepEqual(await strip.$$eval(".pill", (els) => els.map((el) => el.textContent)), [
+      "DMs",
+      "Servers",
+    ]);
+  });
+
+  test("marks the side that is actually injected", async () => {
+    const strip = await stripPage();
+    assert.equal(await strip.$eval(".pill.on", (el) => el.textContent), "DMs");
+    assert.equal(await marker("--nya-side"), "dms");
+  });
+
+  test("clicking a pill swaps the injected stylesheet", async () => {
+    // The end-to-end path this whole feature rests on: a click in our own view,
+    // over IPC, into config, out as a different user stylesheet on Discord's
+    // page. Nothing of ours runs inside that page to make it happen.
+    const strip = await stripPage();
+    await strip.click(".pill:nth-child(2)");
+
+    await until(async () => (await state()).appearance.activeTab === "servers");
+    await until(async () => (await marker("--nya-side")) === "servers");
+    assert.equal(await strip.$eval(".pill.on", (el) => el.textContent), "Servers");
+  });
+
+  test("reserves exactly as much room as the strip occupies", async () => {
+    // Two numbers that must agree: the view's height and the padding the
+    // stylesheet leaves for it. When they drift, the seam is visible.
+    const height = await app.evaluate(({ BaseWindow }) => {
+      const views = BaseWindow.getAllWindows()[0]?.contentView.children as unknown as {
+        getBounds(): { height: number };
+        webContents?: { getURL(): string };
+      }[];
+      const strip = views.find((view) => (view.webContents?.getURL() ?? "").includes("switcher.html"));
+      return strip?.getBounds().height ?? 0;
+    });
+
+    assert.ok(height > 0);
+    assert.equal(await marker("--nya-switcher-height"), `${height}px`);
+  });
+
+  test("goes away under the classic layout, along with the stylesheet", async () => {
+    await panel.evaluate(() => window.nya.setAppearance({ layout: "classic", activeTab: "dms" }));
+
+    await until(
+      async () =>
+        (await app.evaluate(({ BaseWindow }) => {
+          const views = BaseWindow.getAllWindows()[0]?.contentView.children as unknown as {
+            webContents?: { getURL(): string };
+          }[];
+          return views.every((view) => !(view.webContents?.getURL() ?? "").includes("switcher.html"));
+        })) === true,
+    );
+
+    assert.equal(await marker("--nya-side"), "");
+  });
+
+  test("comes back when the unified layout does", async () => {
+    await panel.evaluate(() => window.nya.setAppearance({ layout: "unified", activeTab: "dms" }));
+    const strip = await stripPage();
+    assert.equal(await strip.$eval(".pill.on", (el) => el.textContent), "DMs");
+    assert.equal(await marker("--nya-side"), "dms");
+  });
+});
+
 describe("request filtering", () => {
   test("blocks the analytics endpoint and records it", async () => {
     const error = await app
       .evaluate(({ BaseWindow }) => {
-        const view = BaseWindow.getAllWindows()[0]?.contentView.children[0] as unknown as MainView;
+        const view = (
+          BaseWindow.getAllWindows()[0]?.contentView.children as unknown as MainView[]
+        ).find((child) => !(child.webContents?.getURL() ?? "file://").startsWith("file://"));
+        if (!view) throw new Error("no Discord view");
         return view.webContents.loadURL("https://discord.com/api/v9/science");
       })
       .then(() => "")
@@ -292,7 +397,10 @@ describe("proxy", () => {
 
     // Ask Chromium itself instead of trusting that we stored a setting.
     const resolved = await app.evaluate(({ BaseWindow }) => {
-      const view = BaseWindow.getAllWindows()[0]?.contentView.children[0] as unknown as MainView;
+      const view = (
+        BaseWindow.getAllWindows()[0]?.contentView.children as unknown as MainView[]
+      ).find((child) => !(child.webContents?.getURL() ?? "file://").startsWith("file://"));
+      if (!view) throw new Error("no Discord view");
       return view.webContents.session.resolveProxy("https://discord.com/app");
     });
     assert.match(resolved, /SOCKS5 127\.0\.0\.1:9050/);

@@ -1,0 +1,88 @@
+/*
+ * The switcher strip.
+ *
+ * The page itself is transparent. The strip sits in space the layout
+ * stylesheet reserves at the top of Discord's sidebar, so what shows behind
+ * the pills is Discord's own sidebar colour: the strip inherits whatever theme
+ * is in use without ever reading one. Only the pills paint, and they paint in
+ * translucent white or black so they sit on any background.
+ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  /* Discord's own stack, so the labels match the list underneath them. */
+  font-family: "gg sans", "Noto Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  cursor: default;
+  user-select: none;
+}
+
+#strip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  padding: 0 8px;
+}
+
+.pill {
+  flex: 1;
+  height: 26px;
+  border: 0;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  background: rgba(0, 0, 0, 0.04);
+  color: #5c5e66;
+  cursor: pointer;
+  transition: background-color 100ms ease, color 100ms ease;
+}
+
+.pill:hover {
+  background: rgba(0, 0, 0, 0.07);
+  color: #2e3035;
+}
+
+.pill.on {
+  background: rgba(0, 0, 0, 0.1);
+  color: #060607;
+  font-weight: 600;
+}
+
+/*
+ * Keyboard focus has to stay visible against both surfaces, so it is drawn as
+ * an outline rather than a background change the active pill already uses.
+ */
+.pill:focus-visible {
+  outline: 2px solid #5865f2;
+  outline-offset: -2px;
+}
+
+/* Dark is a class, not a media query: the OS theme is what the main process
+ * samples, and it is the only signal available for what is behind us. */
+.dark .pill {
+  background: rgba(255, 255, 255, 0.06);
+  color: #949ba4;
+}
+
+.dark .pill:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #dbdee1;
+}
+
+.dark .pill.on {
+  background: rgba(255, 255, 255, 0.16);
+  color: #f2f3f5;
+}

@@ -35,6 +35,11 @@
  * has not changed, the selectors below stopped matching: inspect the sidebar
  * and update them.
  *
+ * While the selectors are wrong, the strip sits over the top of Discord's own
+ * server rail, because nothing has moved aside for it. The padding rule below
+ * is the one to get right first. Deleting everything in this file removes the
+ * strip too, which is the clean way back to plain Discord.
+ *
  * ---------------------------------------------------------------------------
  * WHAT NOT TO DO
  *
@@ -53,6 +58,10 @@
 /*
  * Room for the switcher strip, which is a separate view pinned over the top of
  * the sidebar. Without this, Discord's own content sits underneath it.
+ *
+ * `--nya-switcher-height` and `--nya-switcher-width` are supplied by the app,
+ * which is what positions the strip, so they always match its real size. The
+ * fallbacks are only there to keep this file readable on its own.
  */
 [class*="guilds_"],
 [class*="guilds-"],
@@ -91,7 +100,7 @@
  */
 [class*="guilds_"],
 [class*="guilds-"] {
-  width: 240px !important;
+  width: var(--nya-switcher-width, 240px) !important;
 }
 
 [data-list-item-id*="guildsnav"] {

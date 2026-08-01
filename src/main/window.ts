@@ -1,8 +1,15 @@
 import { BaseWindow, WebContentsView, dialog, nativeTheme, type Rectangle } from "electron";
 import { join } from "node:path";
 
+import {
+  SWITCHER_HEIGHT,
+  SWITCHER_WIDTH,
+  contextFromUrl,
+  tabForContext,
+  type SidebarTabId,
+} from "../common/appearance";
 import { CHANNELS } from "../common/channels";
-import { IPC, type AppState, type PaneId } from "../common/ipc";
+import { IPC, type AppState, type PaneId, type SwitcherState } from "../common/ipc";
 import type { PermissionKey } from "../common/policy";
 import { parseBadgeFromTitle, type Profile, type ProfileSummary } from "../common/profile";
 import type { NyaConfig } from "./config";
@@ -76,6 +83,8 @@ export class AppShell {
   private shell: WebContentsView | null = null;
   private shellReady: Promise<void> = Promise.resolve();
   private panelOpen = false;
+  private switcher: WebContentsView | null = null;
+  private switcherShown = false;
   private allowClose = false;
 
   constructor(
@@ -141,6 +150,7 @@ export class AppShell {
    */
   applyLayout(): void {
     for (const entry of this.views.values()) void this.applyLayoutTo(entry);
+    this.syncSwitcher();
   }
 
   private async applyLayoutTo(entry: ProfileView): Promise<void> {
@@ -174,6 +184,9 @@ export class AppShell {
     const background = chromeBackground();
     this.window.setBackgroundColor(background);
     for (const entry of this.views.values()) entry.view.setBackgroundColor(background);
+    // The strip paints on Discord's background rather than its own, so the OS
+    // theme is the only hint it has about what is behind it.
+    this.pushSwitcher();
   }
 
   /** Lets the real quit through; see the `close` handler above. */
@@ -213,11 +226,8 @@ export class AppShell {
     }
 
     this.window.contentView.addChildView(entry.view);
-    if (this.panelOpen && this.shell) {
-      // Keep the panel on top of whatever was just swapped in.
-      this.window.contentView.removeChildView(this.shell);
-      this.window.contentView.addChildView(this.shell);
-    }
+    this.syncSwitcher();
+    this.raiseOverlays();
     this.layout();
     this.window.setTitle(`${profile.name} · ${CHANNELS[profile.channel].label}`);
     this.pushState();
@@ -263,6 +273,24 @@ export class AppShell {
       void this.applyLayoutTo(entry);
     });
 
+    /**
+     * The strip follows navigation, so opening a DM from a notification moves
+     * it to the DMs side instead of leaving you on a side whose list is hidden.
+     *
+     * The URL is the only thing read here. Discord's routes are URLs, so
+     * `/channels/@me/…` and `/channels/<id>/…` already say which side you are
+     * on without anything of ours running in the page.
+     */
+    const follow = (url: string): void => {
+      if (this.profiles.activeId() !== profile.id) return;
+      const tab = tabForContext(contextFromUrl(url));
+      if (tab) this.setActiveTab(tab);
+    };
+    view.webContents.on("did-navigate", (_event, url) => follow(url));
+    view.webContents.on("did-navigate-in-page", (_event, url, isMainFrame) => {
+      if (isMainFrame) follow(url);
+    });
+
     // Discord writes the unread count into the document title. Reading it is
     // free and needs no script injection.
     view.webContents.on("page-title-updated", (_event, title) => {
@@ -288,6 +316,7 @@ export class AppShell {
     entry.watchdog.dispose();
     entry.view.webContents.close();
     this.views.delete(id);
+    this.syncSwitcher();
   }
 
   reloadActive(): void {
@@ -418,12 +447,131 @@ export class AppShell {
     return view;
   }
 
+  // -------------------------------------------------------------- switcher
+
+  /**
+   * Changes which side of the switcher is showing.
+   *
+   * This is the only write path for the active tab, so the strip, the settings
+   * panel and navigation all converge on one place and cannot disagree.
+   */
+  setActiveTab(tab: SidebarTabId, restoreFocus = false): void {
+    if (this.config.get().appearance.activeTab !== tab) {
+      this.config.update((draft) => {
+        draft.appearance.activeTab = tab;
+      });
+      this.applyLayout();
+      this.pushState();
+    }
+    // Clicking the strip focuses it, which would silently stop the message box
+    // receiving keystrokes. Keyboard selection asks not to, so arrow keys can
+    // keep moving along the strip.
+    if (restoreFocus) this.focusActiveProfile();
+  }
+
+  private focusActiveProfile(): void {
+    if (this.panelOpen) return;
+    const id = this.profiles.activeId();
+    const entry = id ? this.views.get(id) : undefined;
+    if (entry && !entry.view.webContents.isDestroyed()) entry.view.webContents.focus();
+  }
+
+  /**
+   * Attaches or detaches the strip to match the current layout.
+   *
+   * It exists only under Unified, only while there is a Discord view for it to
+   * sit over, and only while the stylesheet is actually reserving room for it.
+   * That last condition is what keeps emptying the stylesheet a clean way back
+   * to plain Discord: without it, the strip would go on floating over the top
+   * of the server rail with nothing underneath having moved aside for it.
+   */
+  private syncSwitcher(): void {
+    const wanted =
+      this.config.get().appearance.layout === "unified" &&
+      this.views.size > 0 &&
+      !this.layoutStyles.isEmpty;
+
+    if (!wanted) {
+      if (this.switcherShown && this.switcher) {
+        this.window.contentView.removeChildView(this.switcher);
+        this.switcherShown = false;
+      }
+      return;
+    }
+
+    const view = this.ensureSwitcher();
+    if (!this.switcherShown) {
+      this.window.contentView.addChildView(view);
+      this.switcherShown = true;
+      this.raiseOverlays();
+      this.layout();
+    }
+    this.pushSwitcher();
+  }
+
+  private ensureSwitcher(): WebContentsView {
+    if (this.switcher) return this.switcher;
+
+    const view = new WebContentsView({
+      webPreferences: {
+        ...HARDENED_PREFS,
+        preload: join(__dirname, "..", "preload", "switcher.js"),
+        // Shares the panel's cookie-less in-memory partition. Both are local
+        // file:// UI of ours; neither ever loads anything remote.
+        partition: "nya-shell",
+      },
+    });
+
+    // Transparent, so the strip sits on Discord's own sidebar colour and needs
+    // to be told nothing about which theme is in use.
+    view.setBackgroundColor("#00000000");
+    freezeNavigation(view.webContents);
+    view.webContents.on("did-finish-load", () => this.pushSwitcher());
+    void view.webContents.loadFile(join(__dirname, "..", "renderer", "switcher.html"));
+
+    this.switcher = view;
+    return view;
+  }
+
+  private pushSwitcher(): void {
+    if (!this.switcher || this.switcher.webContents.isDestroyed()) return;
+    const payload: SwitcherState = {
+      activeTab: this.config.get().appearance.activeTab,
+      dark: nativeTheme.shouldUseDarkColors,
+    };
+    this.switcher.webContents.send(IPC.switcherState, payload);
+  }
+
   // ----------------------------------------------------------------- layout
+
+  /**
+   * Puts the overlays back on top after a view has been added underneath them.
+   * `addChildView` moves an existing child to the front, so swapping profiles
+   * would otherwise bury the strip and the panel behind the Discord view.
+   */
+  private raiseOverlays(): void {
+    if (this.switcherShown && this.switcher) {
+      this.window.contentView.removeChildView(this.switcher);
+      this.window.contentView.addChildView(this.switcher);
+    }
+    if (this.panelOpen && this.shell) {
+      this.window.contentView.removeChildView(this.shell);
+      this.window.contentView.addChildView(this.shell);
+    }
+  }
 
   private layout(): void {
     const area = this.contentBounds();
     for (const entry of this.views.values()) entry.view.setBounds(area);
     this.shell?.setBounds(area);
+    // Pinned to the top-left corner, over the sidebar. Clamped so a window
+    // narrower than the sidebar does not get a strip hanging off the edge.
+    this.switcher?.setBounds({
+      x: 0,
+      y: 0,
+      width: Math.min(SWITCHER_WIDTH, area.width),
+      height: Math.min(SWITCHER_HEIGHT, area.height),
+    });
   }
 
   private contentBounds(): Rectangle {

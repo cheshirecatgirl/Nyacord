@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, copyFileSync, readFileSync, watch, type FSWatcher } from "node:fs";
 import { dirname, join } from "node:path";
 
-import type { SidebarTabId } from "../common/appearance";
+import { SWITCHER_HEIGHT, SWITCHER_WIDTH, type SidebarTabId } from "../common/appearance";
 import {
   composeLayoutCss,
   isEmptyStylesheet,
@@ -40,8 +40,25 @@ export class LayoutStyles {
     this.listener = listener;
   }
 
+  /**
+   * The stylesheet for one side, with the strip's real measurements in front
+   * of it.
+   *
+   * The strip is a view the main process positions, so its size is only known
+   * here. Handing it over as custom properties means the gap the stylesheet
+   * reserves is the gap the strip actually fills; writing the numbers into the
+   * file twice is how they drift and leave a seam.
+   */
   css(tab: SidebarTabId): string {
-    return composeLayoutCss(this.sheet, tab);
+    const body = composeLayoutCss(this.sheet, tab);
+    if (!body) return "";
+    return [
+      ":root {",
+      `  --nya-switcher-height: ${SWITCHER_HEIGHT}px;`,
+      `  --nya-switcher-width: ${SWITCHER_WIDTH}px;`,
+      "}",
+      body,
+    ].join("\n");
   }
 
   get isEmpty(): boolean {

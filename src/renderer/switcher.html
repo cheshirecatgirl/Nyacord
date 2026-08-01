@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!-- Local-only page: no network, no inline script or style, no framing. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none';"
+    />
+    <title>Switcher</title>
+    <link rel="stylesheet" href="switcher.css" />
+  </head>
+  <body>
+    <div id="strip" role="tablist" aria-label="Chat list"></div>
+    <script src="switcher.js"></script>
+  </body>
+</html>
