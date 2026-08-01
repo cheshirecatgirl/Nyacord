@@ -194,6 +194,10 @@ h3.spaced {
   color: var(--muted);
 }
 
+.notice.hidden {
+  display: none;
+}
+
 .notice {
   border: 1px solid var(--line);
   border-left: 3px solid var(--accent);

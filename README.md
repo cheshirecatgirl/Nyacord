@@ -136,10 +136,10 @@ OS location and says so in **About**.
 | | |
 | --- | --- |
 | <kbd>Ctrl/Cmd</kbd>+<kbd>P</kbd> | Profiles |
-| <kbd>Ctrl/Cmd</kbd>+<kbd>,</kbd> | Privacy settings |
+| <kbd>Ctrl/Cmd</kbd>+<kbd>,</kbd> | Privacy & Security |
 | <kbd>Ctrl/Cmd</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd> | Network |
-| <kbd>Ctrl/Cmd</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd> | Appearance |
 | <kbd>Ctrl/Cmd</kbd>+<kbd>Shift</kbd>+<kbd>I</kbd> | Inspector |
+| <kbd>Ctrl/Cmd</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd> | Appearance |
 | <kbd>Ctrl/Cmd</kbd>+<kbd>R</kbd> | Reload the Discord view |
 | <kbd>Esc</kbd> | Close the panel |
 

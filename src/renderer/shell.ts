@@ -511,7 +511,7 @@ const LAYOUT_CARDS: {
     title: "Unified",
     tag: "Default",
     desc:
-      "One column with a folder switcher on top. DMs, Servers and your own folders share the strip, so moving between them is a single click, and only the active folder is listed.",
+      "One column with a folder switcher on top. DMs, Servers and your folders share the strip; only the active folder is listed.",
     preview: unifiedMock,
   },
   {
@@ -519,7 +519,7 @@ const LAYOUT_CARDS: {
     title: "Classic",
     tag: "Discord",
     desc:
-      "Discord's own arrangement: a server icon rail on the far left with a separate channel and DM column beside it.",
+      "Discord's own arrangement: a server icon rail with a separate channel and DM column.",
     preview: classicMock,
   },
 ];
@@ -562,10 +562,12 @@ function renderAppearance(): void {
     cards.append(el);
   }
 
-  $("#layout-note").textContent =
-    current.layout === "unified"
-      ? "DMs and Servers are always the first two tabs. Your folders follow them."
-      : "The switcher and folders belong to the unified layout. They stay saved while Classic is selected.";
+  // Only worth saying when the switcher below is inert; under Unified the
+  // strip speaks for itself.
+  const note = $("#layout-note");
+  note.classList.toggle("hidden", current.layout === "unified");
+  note.textContent =
+    "The switcher and folders belong to the unified layout. They stay saved while Classic is selected.";
 
   renderSwitcher(current);
   renderFolders(current);

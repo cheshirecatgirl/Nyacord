@@ -15,7 +15,7 @@
 
     <main id="panel" role="dialog" aria-label="Nyacord settings">
       <nav id="sidebar" role="tablist" aria-orientation="vertical">
-        <div class="brand">Nyacord</div>
+        <div class="brand">Settings</div>
 
         <div class="nav-group">Account</div>
         <button data-pane="profiles" class="tab active">Profiles</button>
@@ -40,8 +40,7 @@
 
         <section class="pane" data-pane="profiles" data-title="Profiles">
           <p class="hint">
-            Each profile is a separate browser session with its own cookies, storage
-            and login. Profiles cannot see each other.
+            Separate browser sessions. Profiles cannot see each other.
           </p>
           <ul id="profile-list"></ul>
 
@@ -117,25 +116,23 @@
         <section class="pane hidden" data-pane="appearance" data-title="Appearance">
           <h3>Navigation layout</h3>
           <p class="hint">
-            How chats are arranged. Both previews are built from the layout's own
-            stylesheet, so they show what you actually get.
+            How chats are arranged.
           </p>
 
           <div id="layouts" class="layouts"></div>
 
-          <div id="layout-note" class="notice"></div>
+          <div id="layout-note" class="notice hidden"></div>
 
           <h3 class="spaced">Folder switcher</h3>
           <p class="hint">
-            Sits above the chat list. Pick a tab; the choice survives a restart.
+            Sits above the chat list. The active tab is remembered.
           </p>
           <div id="switcher" class="switcher" role="tablist" aria-label="Active folder"></div>
 
           <h3 class="spaced">Folders</h3>
           <p class="hint">
-            Extra tabs in the switcher, after DMs and Servers. Paste a Discord link
-            or channel path to add a chat. Clicking a row opens it in the active
-            profile.
+            Extra tabs after DMs and Servers. Paste a Discord link or channel path
+            to add a chat.
           </p>
           <ul id="folder-list"></ul>
           <div class="row end">
@@ -157,8 +154,8 @@
 
         <section class="pane hidden" data-pane="about" data-title="About">
           <p class="hint">
-            A hardened browser shell around Discord's web app. It does not modify
-            Discord, inject scripts into it, or call the Discord API for you.
+            A hardened browser shell around Discord's web app. Nothing is injected
+            into Discord and no Discord API is called.
           </p>
           <dl id="about-facts"></dl>
         </section>

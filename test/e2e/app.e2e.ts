@@ -107,7 +107,7 @@ before(async () => {
   await until(async () => {
     const opened = await app.evaluate(({ Menu }) => {
       const menu = Menu.getApplicationMenu();
-      const nya = menu?.items.find((item) => (item.label || "").includes("Nyacord"));
+      const nya = menu?.items.find((item) => (item.label || "").includes("Settings"));
       const entry = nya?.submenu?.items.find((item) => (item.label || "").startsWith("Network"));
       if (!entry) return false;
       entry.click();

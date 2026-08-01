@@ -1,53 +1,45 @@
-import { Menu, app, type MenuItemConstructorOptions } from "electron";
+import { Menu, type MenuItemConstructorOptions } from "electron";
 
 import type { AppShell } from "./window";
 
 /**
- * The application menu doubles as the keyboard-shortcut table. Shortcuts are
- * registered here, not as global accelerators, so Nyacord never
- * captures keys while another application is focused.
+ * Shortcuts live here, not as global accelerators, so Nyacord never captures
+ * keys while another application is focused.
+ *
+ * The Settings menu lists the panes in the same order as the panel's own
+ * sidebar, so the two never disagree about where anything is.
  */
 export function buildMenu(shell: AppShell): void {
   const isMac = process.platform === "darwin";
 
   const template: MenuItemConstructorOptions[] = [
-    ...(isMac
-      ? ([{ role: "appMenu" }] satisfies MenuItemConstructorOptions[])
-      : []),
+    ...(isMac ? ([{ role: "appMenu" }] satisfies MenuItemConstructorOptions[]) : []),
     {
-      label: "&Nyacord",
+      label: "&Settings",
       submenu: [
+        { label: "Profiles", accelerator: "CmdOrCtrl+P", click: () => shell.openPanel("profiles") },
         {
-          label: "Profiles…",
-          accelerator: "CmdOrCtrl+P",
-          click: () => shell.openPanel("profiles"),
-        },
-        {
-          label: "Privacy settings…",
+          label: "Privacy & Security",
           accelerator: "CmdOrCtrl+,",
           click: () => shell.openPanel("privacy"),
         },
         {
-          label: "Network…",
+          label: "Network",
           accelerator: "CmdOrCtrl+Shift+N",
           click: () => shell.openPanel("network"),
         },
         {
-          label: "Appearance…",
-          accelerator: "CmdOrCtrl+Shift+A",
-          click: () => shell.openPanel("appearance"),
-        },
-        {
-          label: "Privacy inspector…",
+          label: "Inspector",
           accelerator: "CmdOrCtrl+Shift+I",
           click: () => shell.openPanel("inspector"),
         },
-        { type: "separator" },
         {
-          label: "Reload Discord view",
-          accelerator: "CmdOrCtrl+R",
-          click: () => shell.reloadActive(),
+          label: "Appearance",
+          accelerator: "CmdOrCtrl+Shift+A",
+          click: () => shell.openPanel("appearance"),
         },
+        { type: "separator" },
+        { label: "About", click: () => shell.openPanel("about") },
         { type: "separator" },
         ...(isMac ? [] : ([{ role: "quit" }] satisfies MenuItemConstructorOptions[])),
       ],
@@ -67,18 +59,13 @@ export function buildMenu(shell: AppShell): void {
     {
       label: "&View",
       submenu: [
+        { label: "Reload", accelerator: "CmdOrCtrl+R", click: () => shell.reloadActive() },
+        { type: "separator" },
         { role: "resetZoom" },
         { role: "zoomIn" },
         { role: "zoomOut" },
         { type: "separator" },
         { role: "togglefullscreen" },
-      ],
-    },
-    {
-      label: "&Help",
-      submenu: [
-        { label: "About Nyacord", click: () => shell.openPanel("about") },
-        { label: `Version ${app.getVersion()}`, enabled: false },
       ],
     },
   ];

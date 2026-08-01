@@ -28,6 +28,7 @@ Every entry below is enforced in the main process, is covered by
 | Known tracker hosts | Google Analytics, GTM, DoubleClick, Segment, Amplitude, and similar |
 | Chromium background services | Component updates, Safe Browsing, dictionary downloads, optimization hints |
 | Crash reporting | Breakpad and Crashpad are disabled at the Electron layer |
+| Passkey autofill prompts | Conditional WebAuthn is off, so no passkey dialog opens on its own |
 | Hyperlink auditing (`<a ping>`) | Off |
 | Domain reliability reporting | Off: Chromium otherwise reports network errors to Google |
 

@@ -36,6 +36,13 @@ export function applyChromiumSwitches(policy: PrivacyPolicy): void {
     "MediaRouter",
     // Sends page-load timing to Google for "optimization hints".
     "OptimizationHints",
+    // Conditional mediation is the passkey prompt that fires on its own when a
+    // login page loads, before you have asked for anything. Discord's login
+    // screen also has a normal "log in with a passkey" link, which uses a
+    // different mediation mode and keeps working with these off.
+    "WebAuthenticationConditionalUI",
+    "WebAuthenticationPasskeyUpgrade",
+    "WebAuthenticationImmediateGet",
   ];
 
   app.commandLine.appendSwitch("disable-features", disabledFeatures.join(","));
