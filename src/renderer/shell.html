@@ -22,6 +22,7 @@
 
         <div class="nav-group">Protection</div>
         <button data-pane="privacy" class="tab">Privacy &amp; Security</button>
+        <button data-pane="vault" class="tab">Vault &amp; Lock</button>
         <button data-pane="network" class="tab">Network</button>
         <button data-pane="inspector" class="tab">Inspector</button>
 
@@ -62,6 +63,102 @@
           <div id="presets" class="presets"></div>
           <p class="hint" id="preset-note"></p>
           <div id="toggles"></div>
+        </section>
+
+        <section class="pane hidden" data-pane="vault" data-title="Vault &amp; Lock">
+          <p class="hint">
+            Encrypts every profile's session data — cookies, local storage,
+            cache, and the token Discord keeps there — into a single sealed file
+            when you quit. The key is derived from your passphrase and exists
+            only while the app is open.
+          </p>
+
+          <div id="vault-status" class="notice"></div>
+
+          <div id="vault-off">
+            <h3>Set a passphrase</h3>
+            <p class="hint">
+              A sealed file can be guessed at offline, with no app in the way, so
+              length is what protects it. Use a phrase, not a PIN.
+            </p>
+            <div class="row">
+              <input id="vault-new" type="password" placeholder="Passphrase" autocomplete="off" />
+            </div>
+            <div class="row">
+              <input
+                id="vault-confirm"
+                type="password"
+                placeholder="Repeat passphrase"
+                autocomplete="off"
+              />
+            </div>
+            <div class="row end">
+              <span id="vault-strength" class="sub grow"></span>
+              <button id="vault-enable" class="primary">Turn on the vault</button>
+            </div>
+            <p class="hint danger-note">
+              There is no recovery. Nyacord never stores your passphrase, so
+              nobody — including us — can reset it. Forgetting it means the
+              profile data is gone.
+            </p>
+          </div>
+
+          <div id="vault-on" class="hidden">
+            <h3>Auto-lock</h3>
+            <p class="hint">
+              Shows the lock screen after the machine has been idle this long.
+              Locking hides everything and drops the key; it does not re-seal the
+              files, which happens when you quit.
+            </p>
+            <div class="row">
+              <select id="vault-autolock" aria-label="Auto-lock after">
+                <option value="0">Never</option>
+                <option value="1">1 minute</option>
+                <option value="5">5 minutes</option>
+                <option value="15">15 minutes</option>
+                <option value="30">30 minutes</option>
+                <option value="60">1 hour</option>
+              </select>
+              <button id="vault-lock">Lock now</button>
+            </div>
+
+            <h3 class="spaced">Change passphrase</h3>
+            <div class="row">
+              <input
+                id="vault-current"
+                type="password"
+                placeholder="Current passphrase"
+                autocomplete="off"
+              />
+            </div>
+            <div class="row">
+              <input
+                id="vault-next"
+                type="password"
+                placeholder="New passphrase"
+                autocomplete="off"
+              />
+            </div>
+            <div class="row end">
+              <span id="vault-change-status" class="sub grow"></span>
+              <button id="vault-change" class="primary">Change</button>
+            </div>
+
+            <h3 class="spaced">Turn the vault off</h3>
+            <p class="hint">
+              Leaves your profile data readable on disk. Only possible while it
+              is open.
+            </p>
+            <div class="row">
+              <input
+                id="vault-disable-pass"
+                type="password"
+                placeholder="Passphrase"
+                autocomplete="off"
+              />
+              <button id="vault-disable" class="danger">Turn off</button>
+            </div>
+          </div>
         </section>
 
         <section class="pane hidden" data-pane="network" data-title="Network">

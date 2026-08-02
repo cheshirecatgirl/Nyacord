@@ -24,6 +24,11 @@ export function buildMenu(shell: AppShell): void {
           click: () => shell.openPanel("privacy"),
         },
         {
+          label: "Vault & Lock",
+          accelerator: "CmdOrCtrl+Shift+L",
+          click: () => shell.openPanel("vault"),
+        },
+        {
           label: "Network",
           accelerator: "CmdOrCtrl+Shift+N",
           click: () => shell.openPanel("network"),

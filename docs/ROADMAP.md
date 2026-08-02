@@ -22,13 +22,16 @@ What exists, what does not, and what will not.
 - Electron fuses, hardened macOS entitlements, atomic config writes
 - Close-to-tray: closing hides the window so the connection and notifications
   survive, and quitting stays explicit
+- Encrypted profile vault: AES-256-GCM under a scrypt-derived passphrase,
+  sealed at quit and opened at launch, with a lock screen and idle auto-lock
 - Settings panel with a grouped sidebar: Profiles, Privacy &amp; Security,
-  Network, Inspector, Appearance, About
+  Vault &amp; Lock, Network, Inspector, Appearance, About
 - Unified/Classic layout setting with live in-panel previews, and a switcher
   strip pinned over the sidebar with a remembered side (see below for how far
   this goes)
-- 81 unit tests over the pure policy, rule, network, appearance and stylesheet modules
-- 26 end-to-end tests that launch the real app, committed and wired into CI
+- 101 unit tests over the pure policy, rule, network, appearance, stylesheet
+  and vault modules
+- 34 end-to-end tests that launch the real app, committed and wired into CI
 
 The end-to-end suite is the one that matters for regressions: it asserts the
 panel opens on the requested pane, the preload bridge exists, profiles are
@@ -38,8 +41,17 @@ ledger, `session.resolveProxy` reports Chromium genuinely routing through a
 SOCKS5 proxy while an invalid rule falls back to the system proxy and not to a
 direct connection, clicking the switcher strip swaps the stylesheet Discord's
 page is actually running, the gap that stylesheet reserves matches the strip's
-real height, closing hides the window instead of destroying it, and both of our
-pages load with no page errors or CSP violations.
+real height, a weak passphrase is refused by the main process and not merely
+styled red, the lock screen ends up above every other view and the settings
+panel cannot be opened past it, closing hides the window instead of destroying
+it, and all three of our pages load with no page errors or CSP violations.
+
+The vault's own suite is separate and does the round trip for real: it seals a
+profile tree, checks the plaintext is gone and that no recognizable bytes
+survive in the ciphertext, opens it again and compares every file, flips a byte
+to confirm a tampered vault is refused rather than half-extracted, and checks
+that turning the vault off while the data is still sealed is refused — because
+otherwise that button would quietly mean "delete my account".
 
 ## The unified layout
 
@@ -128,6 +140,18 @@ what this item should mean.
 native PipeWire helper; doing it here means either a native module (which costs
 the zero-dependency property) or a PipeWire path through
 `setDisplayMediaRequestHandler`. Worth investigating, not worth rushing.
+
+**Re-sealing on lock, not only on quit.** Today *lock now* drops the key and
+covers the screen; the files stay readable until you quit. Sealing a running app
+would mean releasing Chromium's handles on the partition, and Electron has no
+way to destroy a session, so this needs either a way to tear a session down or a
+move to a RAM-backed working directory. Worth doing, not worth faking, and
+`docs/SECURITY.md` says plainly which one is shipping.
+
+**Vault coverage for `config.json`.** Settings, profile names and proxy rules
+sit outside the vault because the policy has to be read before Chromium starts,
+which is before a passphrase can be asked for. Splitting a small boot config out
+from the rest would close it.
 
 **Policy import/export.** A reviewable, shareable policy file so a community can
 maintain rule sets the way blocklists are maintained.

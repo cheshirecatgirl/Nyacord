@@ -15,7 +15,8 @@ main process  ── privileged. Owns config, policy, sessions, filtering.
         ├── WebContentsView  (profile "work"   → persist:nya-a1b2)  ← Discord, NO preload
         ├── WebContentsView  (profile "canary" → persist:nya-c3d4)  ← Discord, NO preload
         ├── WebContentsView  (switcher strip, file://, partition "nya-shell") ← 240×40, top-left
-        └── WebContentsView  (shell UI,       file://, partition "nya-shell") ← settings panel
+        ├── WebContentsView  (shell UI,       file://, partition "nya-shell") ← settings panel
+        └── WebContentsView  (lock screen,    file://, partition "nya-shell") ← opaque, always topmost
 ```
 
 Only one profile view is attached to the window at a time; switching profiles
@@ -30,8 +31,13 @@ the top-left corner, over space the layout stylesheet reserves at the top of
 Discord's sidebar, and it is attached only while that layout is selected. It is
 transparent too, which is what lets it inherit Discord's theme: what shows
 between the pills is Discord's own sidebar, so the strip never has to learn
-which theme is in use. Both overlays are re-raised after any view is mounted
+which theme is in use. The overlays are re-raised after any view is mounted
 underneath them, because `addChildView` moves an existing child to the front.
+
+The lock screen is opaque and is raised last unconditionally. When a vault is
+configured it goes up before any profile view is created at all — creating one
+opens its `persist:` partition, and the whole point is that the partition does
+not exist in readable form until a passphrase has been given.
 
 ### Why the Discord view has no preload
 
@@ -84,10 +90,15 @@ cannot point a profile at an attacker-chosen partition.
 | `src/main/security/` | Session hardening, permissions, navigation containment |
 | `src/main/privacy/ledger.ts` | The Privacy Inspector's in-memory record |
 | `src/main/reliability/` | Crash, hang and network recovery |
+| `src/common/vault.ts` | The vault format: KDF, cipher, archive framing, path safety |
+| `src/common/passphrase.ts` | Strength rating and lockout curve. Split out because the panel is a browser bundle and cannot pull in `node:crypto` |
+| `src/main/vault.ts` | Sealing and opening the profile tree on disk |
 | `src/preload/shell.ts` | The settings panel's bridge. Attached only to our own UI |
-| `src/preload/switcher.ts` | The strip's bridge: two methods, the smallest surface in the app |
+| `src/preload/switcher.ts` | The strip's bridge: two methods |
+| `src/preload/lock.ts` | The lock screen's bridge: attempt an unlock, be told the state |
 | `src/renderer/shell.*` | The settings panel. No `innerHTML` anywhere. |
 | `src/renderer/switcher.*` | The switcher strip |
+| `src/renderer/lock.*` | The lock screen |
 
 The `common` / `main` split is load-bearing. Everything deciding *what the
 client does* lives in `common` and is tested without launching Electron.
@@ -103,6 +114,16 @@ be portable while writing to `~/.config`:
 3. `applyChromiumSwitches(policy)`: command-line switches must be set before
    `app.whenReady()`.
 4. Single-instance lock, then windows.
+5. Construct the vault and check it **before** any profile view exists. A view
+   on a `persist:` partition is what makes Chromium open that directory, so the
+   lock screen has to come first or there would be nothing left to protect.
+
+Quitting has an order too, and one step in it cannot be synchronous. Sealing
+streams the whole profile tree through a cipher, so `before-quit` holds the
+quit, tears down the profile views to stop Chromium writing underneath the
+snapshot, seals, and then exits. If sealing fails the plaintext is left exactly
+where it was and the app still exits: an unsealed profile is a privacy problem,
+a half-deleted one is a lost account.
 
 Because switches are process-wide and set before a profile is chosen, they are
 driven by the **global** policy only. Per-profile overrides govern request

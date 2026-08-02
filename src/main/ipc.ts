@@ -5,11 +5,13 @@ import { IPC, type CreateProfileRequest } from "../common/ipc";
 import { isSidebarTab, normalizeAppearance } from "../common/appearance";
 import { normalizeDns } from "../common/network";
 import { normalizePolicy, presetPolicy, type PresetName } from "../common/policy";
+import { ratePassphrase } from "../common/passphrase";
 import type { NyaConfig } from "./config";
 import type { ProfileStore } from "./profiles";
 import type { PrivacyLedger } from "./privacy/ledger";
 import { openExternalSafely } from "./security/session";
 import type { JsonStore } from "./store";
+import type { ProfileVault } from "./vault";
 import type { AppShell } from "./window";
 
 /**
@@ -22,6 +24,7 @@ export function registerIpc(
   config: JsonStore<NyaConfig>,
   profiles: ProfileStore,
   ledger: PrivacyLedger,
+  vault: ProfileVault,
   /** Re-applies the process-wide host resolver configuration. */
   onDnsChanged: () => void,
 ): void {
@@ -120,6 +123,58 @@ export function registerIpc(
     // value lets the UI say so instead of appearing to accept it.
     return shell.setProfileProxy(id, proxy);
   });
+
+  /**
+   * The vault's handlers.
+   *
+   * Passphrases arrive here as strings and are used to derive a key that never
+   * leaves this process. Nothing sends one back, and no handler reports whether
+   * a passphrase was close: the only answers are worked, did not, or the sealed
+   * data is unreadable.
+   */
+  ipcMain.handle(IPC.unlockVault, async (_event, passphrase: unknown) => {
+    if (typeof passphrase !== "string") {
+      return { ok: false, reason: "wrong-passphrase", retryInMs: 0 };
+    }
+    return shell.unlock(passphrase);
+  });
+
+  ipcMain.handle(IPC.enableVault, async (_event, passphrase: unknown) => {
+    // Refusing a weak passphrase here rather than in the renderer, because a
+    // vault is an offline target: once the file is taken, the only thing
+    // standing between it and a guessing rig is the passphrase's own length.
+    if (typeof passphrase !== "string" || ratePassphrase(passphrase) === "weak") return false;
+    if (vault.enabled) return false;
+    await vault.enable(passphrase);
+    shell.pushVault();
+    shell.pushState();
+    return true;
+  });
+
+  ipcMain.handle(IPC.changePassphrase, async (_event, current: unknown, next: unknown) => {
+    if (typeof current !== "string" || typeof next !== "string") return false;
+    if (ratePassphrase(next) === "weak") return false;
+    const changed = await vault.changePassphrase(current, next);
+    shell.pushVault();
+    return changed;
+  });
+
+  ipcMain.handle(IPC.disableVault, async (_event, passphrase: unknown) => {
+    if (typeof passphrase !== "string") return false;
+    const removed = await vault.disable(passphrase);
+    shell.pushVault();
+    shell.pushState();
+    return removed;
+  });
+
+  ipcMain.handle(IPC.setAutoLock, (_event, minutes: unknown) => {
+    const stored = vault.setAutoLockMinutes(typeof minutes === "number" ? minutes : 0);
+    shell.refreshIdleTimer();
+    shell.pushVault();
+    return stored;
+  });
+
+  ipcMain.handle(IPC.lockNow, () => shell.lockNow());
 
   ipcMain.handle(IPC.getLedger, (_event, profileId: unknown) =>
     ledger.snapshot(typeof profileId === "string" ? profileId : undefined),

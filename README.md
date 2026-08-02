@@ -49,6 +49,17 @@ cannot see each other. Ephemeral profiles disappear on close.
 uploads. Done by dropping requests at the network layer, not by patching the
 page. The side effects are written down in [PRIVACY.md](docs/PRIVACY.md).
 
+**An encrypted vault.** Set a passphrase and every profile's session data —
+cookies, local storage, cache, and the token Discord keeps there — is sealed
+into a single AES-256-GCM file when you quit, and opened again when you start.
+The key comes from your passphrase via scrypt and exists only while the app is
+open. There is a lock screen, manual or on idle, and no recovery: nothing here
+ever had a copy of your passphrase. It covers the powered-off case — the stolen
+laptop, the cloned drive, the old backup — and
+[SECURITY.md](docs/SECURITY.md#what-the-vault-does-not-do) is specific about
+what it cannot cover, starting with the fact that files are plaintext while the
+app is running because Chromium has them open.
+
 **A privacy inspector.** Every blocked request is listed live with its category,
 method and URL. The classifier is one pure module with unit tests over it.
 
@@ -106,8 +117,8 @@ Needs Node 20 or newer.
 ```bash
 npm install
 npm start          # build and run
-npm test           # 81 unit tests over the pure modules
-npm run test:e2e   # 26 end-to-end tests against the real app
+npm test           # 101 unit tests over the pure modules
+npm run test:e2e   # 34 end-to-end tests against the real app
 npm run dist       # package for the current platform
 ```
 
@@ -138,6 +149,7 @@ OS location and says so in **About**.
 | --- | --- |
 | <kbd>Ctrl/Cmd</kbd>+<kbd>P</kbd> | Profiles |
 | <kbd>Ctrl/Cmd</kbd>+<kbd>,</kbd> | Privacy & Security |
+| <kbd>Ctrl/Cmd</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd> | Vault & Lock |
 | <kbd>Ctrl/Cmd</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd> | Network |
 | <kbd>Ctrl/Cmd</kbd>+<kbd>Shift</kbd>+<kbd>I</kbd> | Inspector |
 | <kbd>Ctrl/Cmd</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd> | Appearance |

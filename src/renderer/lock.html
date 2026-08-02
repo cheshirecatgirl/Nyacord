@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!-- Local-only page: no network, no inline script or style, no framing. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none';"
+    />
+    <title>Locked</title>
+    <link rel="stylesheet" href="lock.css" />
+  </head>
+  <body>
+    <main id="lock" role="dialog" aria-modal="true" aria-labelledby="lock-title">
+      <div class="mark" aria-hidden="true"></div>
+
+      <h1 id="lock-title">Locked</h1>
+      <p id="lock-sub" class="sub">
+        Your profile data is sealed. Enter your passphrase to open it.
+      </p>
+
+      <form id="lock-form">
+        <input
+          id="passphrase"
+          type="password"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="Passphrase"
+          aria-label="Passphrase"
+        />
+        <button id="submit" type="submit" class="primary">Unlock</button>
+      </form>
+
+      <p id="lock-error" class="error" role="alert"></p>
+
+      <p id="lock-warning" class="warning hidden"></p>
+
+      <p class="foot">
+        There is no recovery. Nyacord never had a copy of your passphrase to
+        lose, and nobody can reset it for you.
+      </p>
+    </main>
+
+    <script src="lock.js"></script>
+  </body>
+</html>

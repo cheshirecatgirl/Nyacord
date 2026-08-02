@@ -1,4 +1,11 @@
-import { BaseWindow, WebContentsView, dialog, nativeTheme, type Rectangle } from "electron";
+import {
+  BaseWindow,
+  WebContentsView,
+  dialog,
+  nativeTheme,
+  powerMonitor,
+  type Rectangle,
+} from "electron";
 import { join } from "node:path";
 
 import {
@@ -9,7 +16,16 @@ import {
   type SidebarTabId,
 } from "../common/appearance";
 import { CHANNELS } from "../common/channels";
-import { IPC, type AppState, type PaneId, type SwitcherState } from "../common/ipc";
+import {
+  IPC,
+  type AppState,
+  type PaneId,
+  type SwitcherState,
+  type UnlockOutcome,
+  type VaultState,
+} from "../common/ipc";
+import { lockoutMs } from "../common/passphrase";
+import type { ProfileVault } from "./vault";
 import type { PermissionKey } from "../common/policy";
 import { parseBadgeFromTitle, type Profile, type ProfileSummary } from "../common/profile";
 import type { NyaConfig } from "./config";
@@ -85,6 +101,10 @@ export class AppShell {
   private panelOpen = false;
   private switcher: WebContentsView | null = null;
   private switcherShown = false;
+  private lock: WebContentsView | null = null;
+  private lockShown = false;
+  private lastUnlockAt = 0;
+  private idleTimer: NodeJS.Timeout | null = null;
   private allowClose = false;
 
   constructor(
@@ -92,6 +112,7 @@ export class AppShell {
     private readonly profiles: ProfileStore,
     private readonly ledger: PrivacyLedger,
     private readonly layoutStyles: LayoutStyles,
+    private readonly vault: ProfileVault,
     private readonly info: RuntimeInfo,
   ) {
     const bounds = this.config.get().window;
@@ -194,10 +215,192 @@ export class AppShell {
     this.allowClose = true;
   }
 
+  /**
+   * Tears down every profile view so the vault can take a snapshot that is not
+   * being written to as it is read.
+   *
+   * This does not make the files closed — Electron has no way to destroy a
+   * session, so Chromium keeps its handles until the process ends. What it does
+   * is stop new writes, which is the difference between sealing a profile and
+   * sealing a profile mid-transaction.
+   */
+  prepareForSeal(): void {
+    this.stopIdleTimer();
+    for (const id of [...this.views.keys()]) this.closeProfileView(id);
+  }
+
+  /**
+   * Brings the app up, behind the lock screen if there is a vault.
+   *
+   * No profile view is created while locked, which is the point: a
+   * `WebContentsView` on a `persist:` partition makes Chromium open that
+   * partition's directory, and the whole design is that the directory does not
+   * exist in readable form until a passphrase has been given.
+   */
   start(): void {
+    if (this.vault.enabled && !this.vault.open) {
+      this.showLock();
+      this.window.show();
+      return;
+    }
+    this.startProfiles();
+    this.window.show();
+  }
+
+  private startProfiles(): void {
     const active = this.profiles.active();
     if (active) this.showProfile(active.id);
-    this.window.show();
+    this.armIdleTimer();
+  }
+
+  // -------------------------------------------------------------------- lock
+
+  vaultState(): VaultState {
+    return {
+      enabled: this.vault.enabled,
+      open: this.vault.open,
+      sealed: this.vault.sealedOnDisk,
+      failures: this.vault.failures,
+      retryInMs: this.retryInMs(),
+      autoLockMinutes: this.vault.autoLockMinutes,
+      leftUnsealed: this.vault.leftUnsealed,
+    };
+  }
+
+  /**
+   * How long the running app will refuse another attempt.
+   *
+   * This is a courtesy to a real user who mistyped, not a defence: someone with
+   * the sealed file guesses against their own hardware with no app in the way,
+   * which is what the KDF cost in `common/vault.ts` is for.
+   */
+  private retryInMs(): number {
+    const wait = lockoutMs(this.vault.failures);
+    if (wait === 0) return 0;
+    return Math.max(0, this.lastUnlockAt + wait - Date.now());
+  }
+
+  async unlock(passphrase: string): Promise<UnlockOutcome> {
+    const wait = this.retryInMs();
+    if (wait > 0) return { ok: false, reason: "locked-out", retryInMs: wait };
+
+    this.lastUnlockAt = Date.now();
+    const result = await this.vault.unlock(passphrase);
+
+    if (!result.ok) {
+      this.pushVault();
+      return { ok: false, reason: result.reason, retryInMs: this.retryInMs() };
+    }
+
+    this.hideLock();
+    // Profiles may already exist if this was a re-lock rather than a cold start.
+    if (this.views.size === 0) this.startProfiles();
+    else this.armIdleTimer();
+
+    this.pushVault();
+    this.pushState();
+    return { ok: true };
+  }
+
+  /**
+   * Re-locks a running app.
+   *
+   * The key is dropped and the screen goes up, but the profile data on disk is
+   * not re-sealed, because Chromium still has those files open. Sealing happens
+   * at quit. `docs/SECURITY.md` states this plainly rather than letting the
+   * padlock imply more than it does.
+   *
+   * The views are kept alive on purpose, so the gateway connection survives and
+   * notifications keep arriving while the screen is locked.
+   */
+  lockNow(): boolean {
+    if (!this.vault.enabled) return false;
+    this.closePanel();
+    this.vault.forgetKey();
+    this.showLock();
+    this.pushVault();
+    return true;
+  }
+
+  get locked(): boolean {
+    return this.lockShown;
+  }
+
+  private showLock(): void {
+    const view = this.ensureLock();
+    if (!this.lockShown) {
+      this.window.contentView.addChildView(view);
+      this.lockShown = true;
+      this.layout();
+    }
+    view.webContents.focus();
+    this.stopIdleTimer();
+    this.pushVault();
+  }
+
+  private hideLock(): void {
+    if (!this.lockShown || !this.lock) return;
+    this.window.contentView.removeChildView(this.lock);
+    this.lockShown = false;
+  }
+
+  private ensureLock(): WebContentsView {
+    if (this.lock) return this.lock;
+
+    const view = new WebContentsView({
+      webPreferences: {
+        ...HARDENED_PREFS,
+        preload: join(__dirname, "..", "preload", "lock.js"),
+        partition: "nya-shell",
+      },
+    });
+
+    // Opaque, unlike the settings panel. Nothing behind it should be legible.
+    view.setBackgroundColor(chromeBackground());
+    freezeNavigation(view.webContents);
+    view.webContents.on("did-finish-load", () => this.pushVault());
+    void view.webContents.loadFile(join(__dirname, "..", "renderer", "lock.html"));
+
+    this.lock = view;
+    return view;
+  }
+
+  pushVault(): void {
+    const payload = this.vaultState();
+    if (this.lock && !this.lock.webContents.isDestroyed()) {
+      this.lock.webContents.send(IPC.vaultChanged, payload);
+    }
+    if (this.shell && !this.shell.webContents.isDestroyed()) {
+      this.shell.webContents.send(IPC.vaultChanged, payload);
+    }
+  }
+
+  /**
+   * Auto-lock uses the OS idle time rather than anything observed in Discord's
+   * page. There is no preload there to report activity, and asking the system
+   * how long the keyboard and mouse have been quiet is both more accurate and
+   * less invasive than inferring it.
+   */
+  private armIdleTimer(): void {
+    this.stopIdleTimer();
+    if (!this.vault.enabled || this.vault.autoLockMinutes <= 0) return;
+
+    const limit = this.vault.autoLockMinutes * 60;
+    this.idleTimer = setInterval(() => {
+      if (this.lockShown || !this.vault.open) return;
+      if (powerMonitor.getSystemIdleTime() >= limit) this.lockNow();
+    }, 15_000);
+    this.idleTimer.unref();
+  }
+
+  private stopIdleTimer(): void {
+    if (this.idleTimer) clearInterval(this.idleTimer);
+    this.idleTimer = null;
+  }
+
+  /** Re-reads the auto-lock setting after it has been changed in Settings. */
+  refreshIdleTimer(): void {
+    if (this.vault.open) this.armIdleTimer();
   }
 
   get baseWindow(): BaseWindow {
@@ -320,6 +523,7 @@ export class AppShell {
   }
 
   reloadActive(): void {
+    if (this.lockShown) return;
     const id = this.profiles.activeId();
     if (id) this.views.get(id)?.watchdog.reload();
   }
@@ -396,6 +600,9 @@ export class AppShell {
   }
 
   openPanel(pane: PaneId = "profiles"): void {
+    // Menu items and their accelerators stay live while locked, so this is the
+    // gate that stops Ctrl+P putting a profile list over the lock screen.
+    if (this.lockShown) return;
     const shell = this.ensureShell();
     if (!this.panelOpen) {
       this.window.contentView.addChildView(shell);
@@ -558,12 +765,19 @@ export class AppShell {
       this.window.contentView.removeChildView(this.shell);
       this.window.contentView.addChildView(this.shell);
     }
+    // The lock screen is last unconditionally. Everything else in this method
+    // is a matter of taste; this one is the security property.
+    if (this.lockShown && this.lock) {
+      this.window.contentView.removeChildView(this.lock);
+      this.window.contentView.addChildView(this.lock);
+    }
   }
 
   private layout(): void {
     const area = this.contentBounds();
     for (const entry of this.views.values()) entry.view.setBounds(area);
     this.shell?.setBounds(area);
+    this.lock?.setBounds(area);
     // Pinned to the top-left corner, over the sidebar. Clamped so a window
     // narrower than the sidebar does not get a strip hanging off the edge.
     this.switcher?.setBounds({
@@ -611,6 +825,7 @@ export class AppShell {
       policy: this.config.get().policy,
       dns: this.config.get().dns,
       appearance: this.config.get().appearance,
+      vault: this.vaultState(),
       profiles: this.summaries(),
       activeProfileId: this.profiles.activeId(),
     };

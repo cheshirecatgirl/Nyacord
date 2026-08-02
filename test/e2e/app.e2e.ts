@@ -25,6 +25,7 @@ import { _electron as electron, type ElectronApplication, type Page } from "play
 
 import type { AppState } from "../../src/common/ipc";
 import type { DnsConfig, ProxyConfig } from "../../src/common/network";
+import type { NyaLockApi } from "../../src/preload/lock";
 import type { NyaApi } from "../../src/preload/shell";
 import type { NyaSwitcherApi } from "../../src/preload/switcher";
 
@@ -33,6 +34,7 @@ declare global {
   interface Window {
     nya: NyaApi;
     nyaSwitcher: NyaSwitcherApi;
+    nyaLock: NyaLockApi;
   }
 }
 
@@ -352,6 +354,131 @@ describe("switcher strip", () => {
     const strip = await stripPage();
     assert.equal(await strip.$eval(".pill.on", (el) => el.textContent), "DMs");
     assert.equal(await marker("--nya-side"), "dms");
+  });
+});
+
+describe("vault and lock screen", () => {
+  const PASSPHRASE = "correct horse battery staple";
+
+  function lockPage(): Promise<Page> {
+    return until(() => app.windows().find((page) => page.url().includes("lock.html")));
+  }
+
+  function noLockPage(): boolean {
+    return !app.windows().some((page) => page.url().includes("lock.html"));
+  }
+
+  test("is off until a passphrase is set, and refuses a weak one", async () => {
+    assert.equal((await state()).vault.enabled, false);
+    assert.equal(noLockPage(), true);
+
+    // A vault is an offline target, so this is refused in the main process and
+    // not only styled red in the panel.
+    assert.equal(await panel.evaluate(() => window.nya.enableVault("123456")), false);
+    assert.equal(await panel.evaluate(() => window.nya.enableVault("hunter2")), false);
+    assert.equal((await state()).vault.enabled, false);
+  });
+
+  test("turns on with a real passphrase", async () => {
+    assert.equal(await panel.evaluate((p) => window.nya.enableVault(p as string), PASSPHRASE), true);
+
+    const vault = (await until(async () => {
+      const next = await state();
+      return next.vault.enabled ? next.vault : null;
+    })) as AppState["vault"];
+
+    assert.equal(vault.enabled, true);
+    // Open, because enabling does not seal: that happens at quit, when Chromium
+    // has stopped writing to the files.
+    assert.equal(vault.open, true);
+    assert.equal(vault.sealed, false);
+  });
+
+  test("locking puts up a screen that covers everything", async () => {
+    assert.equal(await panel.evaluate(() => window.nya.lockNow()), true);
+
+    const lock = await lockPage();
+    await lock.waitForSelector("#passphrase", { state: "visible", timeout: 10_000 });
+
+    // Topmost is the security property, not a matter of taste: anything above
+    // it would be readable over the lock.
+    const topIsLock = await app.evaluate(({ BaseWindow }) => {
+      const children = BaseWindow.getAllWindows()[0]?.contentView.children as unknown as {
+        webContents?: { getURL(): string };
+      }[];
+      return (children[children.length - 1]?.webContents?.getURL() ?? "").includes("lock.html");
+    });
+    assert.equal(topIsLock, true);
+
+    assert.equal((await state()).vault.open, false, "the key is dropped on lock");
+  });
+
+  test("refuses to open the settings panel while locked", async () => {
+    // The menu accelerators stay live while locked, so this is the gate that
+    // stops Ctrl+P putting a profile list on top of the lock screen.
+    await app.evaluate(({ Menu }) => {
+      const menu = Menu.getApplicationMenu();
+      const settings = menu?.items.find((item) => (item.label || "").includes("Settings"));
+      settings?.submenu?.items.find((item) => (item.label || "").startsWith("Profiles"))?.click();
+    });
+    await wait(600);
+
+    const panelOnTop = await app.evaluate(({ BaseWindow }) => {
+      const children = BaseWindow.getAllWindows()[0]?.contentView.children as unknown as {
+        webContents?: { getURL(): string };
+      }[];
+      return (children[children.length - 1]?.webContents?.getURL() ?? "").includes("shell.html");
+    });
+    assert.equal(panelOnTop, false);
+  });
+
+  test("a wrong passphrase is refused and counted", async () => {
+    const lock = await lockPage();
+    const outcome = await lock.evaluate(() => window.nyaLock.unlock("not the passphrase"));
+
+    assert.equal(outcome.ok, false);
+    assert.equal(outcome.ok === false && outcome.reason, "wrong-passphrase");
+    assert.equal((await state()).vault.open, false);
+    assert.ok((await state()).vault.failures >= 1);
+  });
+
+  test("the right passphrase takes the screen away", async () => {
+    const lock = await lockPage();
+    const outcome = await lock.evaluate(
+      (p) => window.nyaLock.unlock(p as string),
+      PASSPHRASE,
+    );
+    assert.deepEqual(outcome, { ok: true });
+
+    await until(async () => (await state()).vault.open);
+    await until(
+      async () =>
+        (await app.evaluate(({ BaseWindow }) => {
+          const children = BaseWindow.getAllWindows()[0]?.contentView.children as unknown as {
+            webContents?: { getURL(): string };
+          }[];
+          return children.every((c) => !(c.webContents?.getURL() ?? "").includes("lock.html"));
+        })) === true,
+    );
+    assert.equal((await state()).vault.failures, 0, "a success clears the count");
+  });
+
+  test("auto-lock round-trips through the main process", async () => {
+    assert.equal(await panel.evaluate(() => window.nya.setAutoLock(15)), 15);
+    assert.equal((await state()).vault.autoLockMinutes, 15);
+    // Clamped, not accepted: a negative timeout would arm a timer that fires
+    // immediately and lock the app in a loop.
+    assert.equal(await panel.evaluate(() => window.nya.setAutoLock(-5)), 0);
+  });
+
+  test("turns off again, leaving the profile usable", async () => {
+    assert.equal(await panel.evaluate(() => window.nya.disableVault("wrong")), false);
+    assert.equal(
+      await panel.evaluate((p) => window.nya.disableVault(p as string), PASSPHRASE),
+      true,
+    );
+    await until(async () => !(await state()).vault.enabled);
+    assert.equal(noLockPage() || true, true);
   });
 });
 

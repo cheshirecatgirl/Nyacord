@@ -10,6 +10,7 @@ import { PrivacyLedger } from "./privacy/ledger";
 import { ProfileStore } from "./profiles";
 import { applyChromiumSwitches } from "./switches";
 import { AppTray } from "./tray";
+import { ProfileVault } from "./vault";
 import { AppShell } from "./window";
 
 /**
@@ -41,6 +42,9 @@ if (!app.requestSingleInstanceLock()) {
 
 let shell: AppShell | null = null;
 let tray: AppTray | null = null;
+let vault: ProfileVault | null = null;
+/** Guards the seal-then-exit dance in `before-quit` against re-entering itself. */
+let sealing = false;
 
 app.on("second-instance", () => shell?.focus());
 
@@ -71,7 +75,20 @@ app.whenReady().then(() => {
     join(__dirname, "..", "..", "..", "assets", "layout", "unified.css"),
   );
 
-  shell = new AppShell(config, profiles, ledger, layoutStyles, {
+  /**
+   * The vault wraps `session/Partitions`, which is where every profile's
+   * cookies, localStorage, IndexedDB and cache live. It is constructed before
+   * the shell and checked before any profile view exists, because creating one
+   * is what makes Chromium open that directory.
+   */
+  vault = new ProfileVault(
+    join(app.getPath("sessionData"), "Partitions"),
+    join(dataRoot(), "vault.bin"),
+    join(dataRoot(), "vault.json"),
+  );
+  vault.noteStartupState();
+
+  shell = new AppShell(config, profiles, ledger, layoutStyles, vault, {
     version: app.getVersion(),
     electron: process.versions.electron ?? "unknown",
     chrome: process.versions.chrome ?? "unknown",
@@ -82,7 +99,7 @@ app.whenReady().then(() => {
     devMode,
   });
 
-  registerIpc(shell, config, profiles, ledger, configureDns);
+  registerIpc(shell, config, profiles, ledger, vault, configureDns);
   buildMenu(shell);
 
   tray = new AppTray(shell);
@@ -111,7 +128,9 @@ app.whenReady().then(() => {
 
   app.on("activate", () => shell?.focus());
 
-  app.on("before-quit", () => {
+  app.on("before-quit", (event) => {
+    if (sealing) return;
+
     clearInterval(refreshTray);
     clearInterval(netPoll);
     // Let the window actually close this time; it hides on close otherwise.
@@ -119,6 +138,29 @@ app.whenReady().then(() => {
     layoutStyles.dispose();
     config.flush();
     tray?.destroy();
+
+    /**
+     * Sealing is the one thing at shutdown that cannot be synchronous: it
+     * streams the whole profile tree through a cipher. So quitting is held,
+     * the profile views are torn down so Chromium stops writing underneath the
+     * snapshot, and the exit happens once the ciphertext is on disk.
+     *
+     * If sealing fails the plaintext is deliberately left alone and the app
+     * still exits. An unsealed profile is a privacy problem; a half-deleted one
+     * is a lost account.
+     */
+    if (!vault?.open) return;
+
+    event.preventDefault();
+    sealing = true;
+    shell?.prepareForSeal();
+
+    void vault
+      .seal()
+      .catch((error: unknown) => {
+        console.error("[nya] sealing failed; the profile was left readable:", error);
+      })
+      .finally(() => app.exit(0));
   });
 });
 

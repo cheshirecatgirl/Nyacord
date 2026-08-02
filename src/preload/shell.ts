@@ -1,6 +1,13 @@
 import { contextBridge, ipcRenderer } from "electron";
 
-import { IPC, type AppState, type CreateProfileRequest, type LedgerSnapshot, type PaneId } from "../common/ipc";
+import {
+  IPC,
+  type AppState,
+  type CreateProfileRequest,
+  type LedgerSnapshot,
+  type PaneId,
+  type VaultState,
+} from "../common/ipc";
 import type { AppearanceConfig } from "../common/appearance";
 import type { DnsConfig, ProxyConfig } from "../common/network";
 import type { PrivacyPolicy } from "../common/policy";
@@ -44,6 +51,28 @@ const api = {
   setAppearance: (appearance: AppearanceConfig): Promise<AppearanceConfig> =>
     ipcRenderer.invoke(IPC.setAppearance, appearance),
 
+
+  /**
+   * Vault management. `unlock` is deliberately absent: that belongs to the lock
+   * screen, whose bridge cannot do anything else. The panel only exists while
+   * the vault is already open.
+   */
+  enableVault: (passphrase: string): Promise<boolean> =>
+    ipcRenderer.invoke(IPC.enableVault, passphrase),
+
+  changePassphrase: (current: string, next: string): Promise<boolean> =>
+    ipcRenderer.invoke(IPC.changePassphrase, current, next),
+
+  disableVault: (passphrase: string): Promise<boolean> =>
+    ipcRenderer.invoke(IPC.disableVault, passphrase),
+
+  setAutoLock: (minutes: number): Promise<number> => ipcRenderer.invoke(IPC.setAutoLock, minutes),
+
+  lockNow: (): Promise<boolean> => ipcRenderer.invoke(IPC.lockNow),
+
+  onVaultChanged: (listener: (state: VaultState) => void): void => {
+    ipcRenderer.on(IPC.vaultChanged, (_event, state: VaultState) => listener(state));
+  },
 
   getLedger: (profileId?: string): Promise<LedgerSnapshot> =>
     ipcRenderer.invoke(IPC.getLedger, profileId),

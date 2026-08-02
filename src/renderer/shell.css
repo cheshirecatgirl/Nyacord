@@ -194,6 +194,16 @@ h3.spaced {
   color: var(--muted);
 }
 
+/*
+ * Every `.hidden` rule here used to be scoped to one component, so a plain
+ * `<div class="hidden">` stayed visible. The generic rule is the default; the
+ * scoped ones below stay because they have to out-specify a `display` their own
+ * component sets.
+ */
+.hidden {
+  display: none;
+}
+
 .notice.hidden {
   display: none;
 }
@@ -205,6 +215,30 @@ h3.spaced {
   padding: 10px 12px;
   color: var(--muted);
   background: var(--bg-raised);
+  margin-bottom: 16px;
+}
+
+/* Used where the consequence of getting it wrong is losing data, not settings. */
+.notice.alarm {
+  border-left-color: var(--danger);
+  color: var(--danger);
+}
+
+.danger-note {
+  margin-top: 12px;
+  color: var(--danger);
+}
+
+.strength-weak {
+  color: var(--danger);
+}
+
+.strength-fair {
+  color: #ffcf8b;
+}
+
+.strength-strong {
+  color: #9bdcb0;
 }
 
 ul {
@@ -233,7 +267,12 @@ ul {
   min-width: 0;
 }
 
-input[type="text"],
+/*
+ * Matched by exclusion rather than by listing types. Keyed on
+ * `input[type="text"]`, the vault's password fields arrived completely
+ * unstyled, and the next input type added would have done the same.
+ */
+input:not([type="checkbox"]),
 select {
   font: inherit;
   color: var(--text);
@@ -243,12 +282,12 @@ select {
   padding: 7px 10px;
 }
 
-input[type="text"] {
+input:not([type="checkbox"]) {
   flex: 1;
   min-width: 0;
 }
 
-input[type="text"]:focus-visible,
+input:not([type="checkbox"]):focus-visible,
 select:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -1px;

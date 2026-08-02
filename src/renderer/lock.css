@@ -1,0 +1,171 @@
+/*
+ * The lock screen.
+ *
+ * Fully opaque, unlike the settings panel: the point is that nothing behind it
+ * is legible. It covers the whole window and there is no way past it that does
+ * not go through the passphrase field.
+ */
+
+:root {
+  --bg: #16171b;
+  --bg-sunken: #101115;
+  --bg-raised: #1e2026;
+  --line: #2c2f37;
+  --text: #e6e7ea;
+  --muted: #9aa0ab;
+  --faint: #6b7280;
+  --accent: #c8b8ff;
+  --accent-dim: rgba(200, 184, 255, 0.14);
+  --danger: #ff8b8b;
+  --warn: #ffcf8b;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  font: 13px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--text);
+  background: var(--bg-sunken);
+  overflow: hidden;
+}
+
+#lock {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 32px;
+  text-align: center;
+}
+
+.mark {
+  width: 46px;
+  height: 46px;
+  margin-bottom: 6px;
+  border-radius: 13px;
+  background: var(--accent-dim);
+  border: 1px solid var(--line);
+  position: relative;
+}
+
+/* A padlock drawn in CSS, so the page needs no image and no font. */
+.mark::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 11px;
+  width: 16px;
+  height: 13px;
+  transform: translateX(-50%);
+  border: 2px solid var(--accent);
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+}
+
+.mark::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 21px;
+  width: 24px;
+  height: 15px;
+  transform: translateX(-50%);
+  border-radius: 4px;
+  background: var(--accent);
+}
+
+h1 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.sub {
+  margin: 0;
+  max-width: 34em;
+  color: var(--muted);
+}
+
+#lock-form {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  width: min(400px, 100%);
+}
+
+input {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  padding: 0 11px;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+input:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+button {
+  height: 34px;
+  padding: 0 16px;
+  font: inherit;
+  font-weight: 550;
+  color: var(--text);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+button.primary {
+  color: #1a1524;
+  background: var(--accent);
+  border-color: transparent;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.error {
+  margin: 0;
+  min-height: 1.5em;
+  color: var(--danger);
+}
+
+.warning {
+  margin: 0;
+  max-width: 40em;
+  padding: 9px 12px;
+  color: var(--warn);
+  background: rgba(255, 207, 139, 0.08);
+  border: 1px solid rgba(255, 207, 139, 0.22);
+  border-radius: 8px;
+  text-align: left;
+}
+
+.foot {
+  margin: 14px 0 0;
+  max-width: 34em;
+  color: var(--faint);
+}
+
+.hidden {
+  display: none;
+}

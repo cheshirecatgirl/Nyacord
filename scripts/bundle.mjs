@@ -49,5 +49,12 @@ const renderer = (name) => ({
 });
 
 await Promise.all(
-  [preload("shell"), preload("switcher"), renderer("shell"), renderer("switcher")].map(build),
+  [
+    preload("shell"),
+    preload("switcher"),
+    preload("lock"),
+    renderer("shell"),
+    renderer("switcher"),
+    renderer("lock"),
+  ].map((options) => build(options)),
 );

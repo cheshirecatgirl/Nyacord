@@ -14,8 +14,9 @@ import {
   type LayoutMode,
 } from "../common/appearance";
 import { CHANNELS, CHANNEL_IDS } from "../common/channels";
-import type { AppState, LedgerSnapshot, PaneId } from "../common/ipc";
+import type { AppState, LedgerSnapshot, PaneId, VaultState } from "../common/ipc";
 import { describeProxy, proxyResolvesRemotely, type DnsConfig, type ProxyConfig } from "../common/network";
+import { ratePassphrase, type PassphraseVerdict } from "../common/passphrase";
 import type { GhostPolicy, PrivacyPolicy } from "../common/policy";
 import type { ProfileSummary } from "../common/profile";
 import { RULE_CATEGORY_LABELS } from "../common/rules";
@@ -635,6 +636,124 @@ $("#clear-ledger").addEventListener("click", () => {
   void nya.clearLedger().then(refreshLedger);
 });
 
+// -------------------------------------------------------------------- vault
+
+const STRENGTH_LABEL: Record<PassphraseVerdict, string> = {
+  empty: "",
+  weak: "Too weak — use a longer phrase, not a PIN",
+  fair: "Fair",
+  strong: "Strong",
+};
+
+function renderVault(): void {
+  const vault = state?.vault;
+  if (!vault) return;
+
+  $("#vault-off").classList.toggle("hidden", vault.enabled);
+  $("#vault-on").classList.toggle("hidden", !vault.enabled);
+
+  const status = $("#vault-status");
+  status.classList.toggle("alarm", vault.leftUnsealed);
+  status.textContent = vaultStatusText(vault);
+
+  const autolock = $<HTMLSelectElement>("#vault-autolock");
+  autolock.value = String(vault.autoLockMinutes);
+}
+
+function vaultStatusText(vault: VaultState): string {
+  if (!vault.enabled) {
+    return "Off. Profile data is stored the way any browser stores it: readable to anything that can read your user account.";
+  }
+  if (vault.leftUnsealed) {
+    return "On, but a previous session ended without sealing, so readable profile data is on disk right now. Quitting normally will seal it.";
+  }
+  return "On. Profile data is sealed into an encrypted file when you quit, and opened with your passphrase when you start.";
+}
+
+/** Shows how a passphrase rates as it is typed, without ever sending it anywhere. */
+function wireStrengthMeter(): void {
+  const field = $<HTMLInputElement>("#vault-new");
+  const meter = $("#vault-strength");
+
+  field.addEventListener("input", () => {
+    const verdict = ratePassphrase(field.value);
+    meter.className = `sub grow strength-${verdict === "empty" ? "weak" : verdict}`;
+    meter.textContent = STRENGTH_LABEL[verdict];
+  });
+}
+
+function wireVault(): void {
+  wireStrengthMeter();
+
+  $("#vault-enable").addEventListener("click", () => {
+    const passphrase = $<HTMLInputElement>("#vault-new").value;
+    const confirm = $<HTMLInputElement>("#vault-confirm").value;
+    const meter = $("#vault-strength");
+
+    if (passphrase !== confirm) {
+      meter.className = "sub grow strength-weak";
+      meter.textContent = "The two passphrases do not match";
+      return;
+    }
+    if (ratePassphrase(passphrase) === "weak") {
+      meter.className = "sub grow strength-weak";
+      meter.textContent = STRENGTH_LABEL.weak;
+      return;
+    }
+
+    void nya.enableVault(passphrase).then((ok) => {
+      if (!ok) {
+        meter.className = "sub grow strength-weak";
+        meter.textContent = "That passphrase was refused";
+        return;
+      }
+      $<HTMLInputElement>("#vault-new").value = "";
+      $<HTMLInputElement>("#vault-confirm").value = "";
+      meter.textContent = "";
+    });
+  });
+
+  $("#vault-change").addEventListener("click", () => {
+    const current = $<HTMLInputElement>("#vault-current");
+    const next = $<HTMLInputElement>("#vault-next");
+    const status = $("#vault-change-status");
+
+    if (ratePassphrase(next.value) === "weak") {
+      status.className = "sub grow strength-weak";
+      status.textContent = STRENGTH_LABEL.weak;
+      return;
+    }
+
+    void nya.changePassphrase(current.value, next.value).then((ok) => {
+      status.className = ok ? "sub grow strength-strong" : "sub grow strength-weak";
+      status.textContent = ok ? "Passphrase changed" : "The current passphrase did not match";
+      if (ok) {
+        current.value = "";
+        next.value = "";
+      }
+    });
+  });
+
+  $("#vault-disable").addEventListener("click", () => {
+    const field = $<HTMLInputElement>("#vault-disable-pass");
+    void nya.disableVault(field.value).then((ok) => {
+      field.value = "";
+      if (!ok) {
+        const status = $("#vault-status");
+        status.classList.add("alarm");
+        status.textContent =
+          "Could not turn the vault off. Either the passphrase did not match, or the data is still sealed and has to be opened first.";
+      }
+    });
+  });
+
+  $("#vault-autolock").addEventListener("change", (event) => {
+    void nya.setAutoLock(Number((event.target as HTMLSelectElement).value));
+  });
+
+  $("#vault-lock").addEventListener("click", () => void nya.lockNow());
+}
+
 // -------------------------------------------------------------------- about
 
 function renderAbout(): void {
@@ -669,11 +788,21 @@ function render(next: AppState): void {
   renderPrivacy();
   renderNetwork();
   renderAppearance();
+  renderVault();
   renderAbout();
 }
 
 populateChannelOptions();
+wireVault();
 nya.onStateChanged(render);
 nya.onLedgerChanged(renderLedger);
 nya.onShowPane(showPane);
+// The vault changes from outside this panel too — an auto-lock, or a seal at
+// quit — so its state arrives on its own channel rather than only with a
+// full app state.
+nya.onVaultChanged((vault) => {
+  if (!state) return;
+  state = { ...state, vault };
+  renderVault();
+});
 void nya.getState().then(render);

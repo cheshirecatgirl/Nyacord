@@ -26,6 +26,17 @@ export function applyChromiumSwitches(policy: PrivacyPolicy): void {
   // every window, not something each BrowserWindow has to remember.
   app.enableSandbox();
 
+  /**
+   * Site isolation, stated rather than assumed.
+   *
+   * It is Chromium's answer to Spectre and to a compromised renderer reading
+   * another origin's memory, and it is on by default — but "on by default" is
+   * a fact about the version we happen to ship, not a guarantee. Naming it
+   * means a future default flip, or an embedder that turns it off, cannot
+   * quietly cost us the property.
+   */
+  app.commandLine.appendSwitch("site-per-process");
+
   const disabledFeatures = [
     // Chromium's ad-privacy stack. We are not an ad platform; these only ever
     // create profiling surface.
@@ -43,9 +54,32 @@ export function applyChromiumSwitches(policy: PrivacyPolicy): void {
     "WebAuthenticationConditionalUI",
     "WebAuthenticationPasskeyUpgrade",
     "WebAuthenticationImmediateGet",
+    // Autofill talks to a Google endpoint to classify form fields. We have one
+    // login form and it is Discord's; nothing here needs a server's opinion.
+    "AutofillServerCommunication",
+    // Queries a Google time server to detect a skewed clock.
+    "NetworkTimeServiceQuerying",
+    // On-device behavioural modelling, for features a chat client does not have.
+    "SegmentationPlatform",
   ];
 
+  /**
+   * An unrecognized feature name is ignored rather than rejected, so this list
+   * degrades to a no-op across Chromium versions instead of failing to start.
+   * Convenient, and worth knowing: a typo here is silent.
+   */
   app.commandLine.appendSwitch("disable-features", disabledFeatures.join(","));
+
+  /**
+   * The umbrella over Chromium's background traffic: variations, component and
+   * extension updates, and the rest of the periodic fetches that happen with no
+   * page open. Several of the individual switches below are inside it; they are
+   * kept because they are the ones worth being explicit about.
+   */
+  app.commandLine.appendSwitch("disable-background-networking");
+  // Field-trial configuration is fetched and changes behaviour between runs.
+  // A client whose privacy posture is the product should not vary by lottery.
+  app.commandLine.appendSwitch("disable-field-trial-config");
 
   // Chromium reports network-error statistics back to Google by default.
   app.commandLine.appendSwitch("disable-domain-reliability");
