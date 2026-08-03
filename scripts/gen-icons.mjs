@@ -69,7 +69,7 @@ function draw(size) {
   const rgba = Buffer.alloc(size * size * 4);
   const c = size / 2;
   const plate = { r: 0x1a, g: 0x1b, b: 0x1f };
-  const mark = { r: 0xc8, g: 0xb8, b: 0xff };
+  const mark = { r: 0x8f, g: 0xb3, b: 0xd1 };
 
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {

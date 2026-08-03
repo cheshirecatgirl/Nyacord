@@ -462,7 +462,7 @@ function unifiedMock(): HTMLDivElement {
       mock("mock-switcher", mockTab(true, "sm"), mockTab(false, "md")),
       mock(
         "mock-list",
-        mockRow("violet"),
+        mockRow("slate"),
         mockRow("rose", "on"),
         mockRow("green square"),
         mockRow("amber square"),
@@ -488,7 +488,7 @@ function classicMock(): HTMLDivElement {
     mock(
       "mock-list",
       mock("mock-group", caret, mock("mock-line short bright")),
-      mockRow("violet"),
+      mockRow("slate"),
       mockRow("rose", "on"),
       mockRow("cyan"),
     ),

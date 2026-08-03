@@ -14,8 +14,9 @@
   --text: #e6e7ea;
   --muted: #9aa0ab;
   --faint: #6b7280;
-  --accent: #c8b8ff;
-  --accent-dim: rgba(200, 184, 255, 0.14);
+  --accent: #8fb3d1;
+  --accent-dim: rgba(143, 179, 209, 0.14);
+  --accent-ink: #0e1620;
   --danger: #ff8b8b;
   --warn: #ffcf8b;
   color-scheme: dark;
@@ -133,7 +134,7 @@ button {
 }
 
 button.primary {
-  color: #1a1524;
+  color: var(--accent-ink);
   background: var(--accent);
   border-color: transparent;
 }
