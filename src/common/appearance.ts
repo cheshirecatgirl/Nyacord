@@ -1,26 +1,20 @@
 /**
- * Appearance: how the client arranges itself, as opposed to what it blocks.
+ * How the client arranges itself, as opposed to what it blocks.
  *
- * The one setting is the navigation layout. `classic` is Discord's own
- * arrangement: a narrow rail of server icons on the far left and a separate
- * channel/DM column beside it. `unified` follows Telegram instead. A small
- * switcher runs along the top of the sidebar and one list sits below it,
- * showing either your DMs or your servers.
+ * One setting: the navigation layout. `classic` is Discord's own arrangement,
+ * a narrow rail of server icons beside a separate channel column. `unified`
+ * follows Telegram: a switcher along the top of the sidebar with one list
+ * below it, showing either DMs or servers.
  *
- * The switcher is what makes this work. Stacking both in one scroll would be
- * two lists in one container, so you would scroll more, not less. One at a
- * time keeps the column short and the context clear.
+ * The switcher is what makes it work. Stacking both lists in one scroll would
+ * mean scrolling more, not less; one at a time keeps the column short.
  *
- * There is no folder model here. Discord already has server folders, with drag
- * and drop, saved to your account and synced everywhere. Building a second
- * folder system beside it would be a hand-curated copy of something that
- * already works, so the Servers tab shows Discord's own list and its folders
- * come with it.
+ * No folder model of our own. Discord's server folders already exist, with
+ * drag and drop, synced to the account, so the Servers tab shows Discord's
+ * list and the folders come with it.
  */
 
 export type LayoutMode = "unified" | "classic";
-
-export const LAYOUT_MODES: readonly LayoutMode[] = ["unified", "classic"];
 
 export function isLayoutMode(value: unknown): value is LayoutMode {
   return value === "unified" || value === "classic";
@@ -38,13 +32,10 @@ export function isSidebarTab(value: unknown): value is SidebarTabId {
 }
 
 /**
- * The strip's size, in device-independent pixels.
- *
- * The strip is a real view pinned over the top of the sidebar, so these numbers
- * also decide how much room the stylesheet has to reserve and how wide the
- * server rail has to widen to. They are handed to the stylesheet as custom
- * properties rather than written into it twice, because a strip that is 40px
- * tall over a 32px gap is a visible seam.
+ * The strip's size, in device-independent pixels. Also decides how much room
+ * the stylesheet reserves and how far the server rail widens, so the numbers
+ * are handed over as custom properties instead of written down twice. A 40px
+ * strip over a 32px gap is a visible seam.
  */
 export const SWITCHER_HEIGHT = 40;
 export const SWITCHER_WIDTH = 240;
@@ -72,11 +63,10 @@ export function normalizeAppearance(input: unknown): AppearanceConfig {
 }
 
 /**
- * Where the Discord view currently is, worked out from its URL.
- *
- * This is the whole reason the switcher needs nothing from inside the page.
- * Discord's routes are URLs, so `webContents.getURL()` already says whether
- * you are in direct messages or in a server, and which server.
+ * Where the Discord view is, worked out from its URL. Discord's routes are
+ * URLs, so `webContents.getURL()` already says whether you are in direct
+ * messages or in a server, and which one. This is why the switcher needs
+ * nothing from inside the page.
  */
 export type ChatContext =
   | { readonly kind: "dms" }

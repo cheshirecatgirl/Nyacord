@@ -140,7 +140,7 @@ export function registerIpc(
   });
 
   ipcMain.handle(IPC.enableVault, async (_event, passphrase: unknown) => {
-    // Refusing a weak passphrase here rather than in the renderer, because a
+    // Refusing a weak passphrase here, not in the renderer, because a
     // vault is an offline target: once the file is taken, the only thing
     // standing between it and a guessing rig is the passphrase's own length.
     if (typeof passphrase !== "string" || ratePassphrase(passphrase) === "weak") return false;

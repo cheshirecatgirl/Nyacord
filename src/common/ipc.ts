@@ -75,7 +75,7 @@ export interface VaultState {
 /**
  * The answer to an unlock attempt, as the lock screen sees it.
  *
- * "wrong-passphrase" and "corrupt" are kept apart deliberately. They call for
+ * "wrong-passphrase" and "corrupt" are kept apart. They call for
  * different things from the user, and collapsing them into "failed" is how
  * someone spends an evening retyping a passphrase that was right all along.
  */
@@ -90,7 +90,7 @@ export type UnlockOutcome =
 /**
  * Everything the switcher strip is allowed to know.
  *
- * Deliberately not `AppState`. The strip sits over Discord's own sidebar and
+ * Not `AppState`. The strip sits over Discord's own sidebar and
  * needs two facts to draw itself, so it gets two facts; profiles, policy and
  * the ledger stay on the settings panel's side of the bridge.
  */

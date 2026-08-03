@@ -640,7 +640,7 @@ $("#clear-ledger").addEventListener("click", () => {
 
 const STRENGTH_LABEL: Record<PassphraseVerdict, string> = {
   empty: "",
-  weak: "Too weak — use a longer phrase, not a PIN",
+  weak: "Too weak. Use a longer phrase, not a PIN.",
   fair: "Fair",
   strong: "Strong",
 };
@@ -662,12 +662,12 @@ function renderVault(): void {
 
 function vaultStatusText(vault: VaultState): string {
   if (!vault.enabled) {
-    return "Off. Profile data is stored the way any browser stores it: readable to anything that can read your user account.";
+    return "Off. Profile data is readable to anything that can read your user account.";
   }
   if (vault.leftUnsealed) {
-    return "On, but a previous session ended without sealing, so readable profile data is on disk right now. Quitting normally will seal it.";
+    return "On, but a previous session ended without sealing. Readable data is on disk now; quitting will seal it.";
   }
-  return "On. Profile data is sealed into an encrypted file when you quit, and opened with your passphrase when you start.";
+  return "On. Sealed when you quit, opened with your passphrase when you start.";
 }
 
 /** Shows how a passphrase rates as it is typed, without ever sending it anywhere. */
@@ -742,7 +742,7 @@ function wireVault(): void {
         const status = $("#vault-status");
         status.classList.add("alarm");
         status.textContent =
-          "Could not turn the vault off. Either the passphrase did not match, or the data is still sealed and has to be opened first.";
+          "Could not turn the vault off. Either the passphrase did not match, or the data is still sealed.";
       }
     });
   });
@@ -797,9 +797,8 @@ wireVault();
 nya.onStateChanged(render);
 nya.onLedgerChanged(renderLedger);
 nya.onShowPane(showPane);
-// The vault changes from outside this panel too — an auto-lock, or a seal at
-// quit — so its state arrives on its own channel rather than only with a
-// full app state.
+// The vault also changes from outside this panel, on an auto-lock or a seal
+// at quit, so its state arrives on its own channel.
 nya.onVaultChanged((vault) => {
   if (!state) return;
   state = { ...state, vault };

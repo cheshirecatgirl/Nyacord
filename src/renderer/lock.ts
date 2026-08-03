@@ -1,11 +1,8 @@
 /**
- * The lock screen.
- *
- * It holds the passphrase for exactly as long as it takes to hand it to the
- * main process, then overwrites the field. That is not much of a defence on its
- * own — a string in a renderer is not something JavaScript lets you erase — but
- * leaving it sitting in a focused input across a failed attempt is a habit
- * worth not having.
+ * The lock screen. Holds the passphrase only long enough to hand it to the main
+ * process, then clears the field. JavaScript cannot erase the string itself,
+ * but leaving one sitting in a focused input across a failed attempt is a habit
+ * to avoid.
  */
 
 import type { UnlockOutcome, VaultState } from "../common/ipc";
@@ -26,7 +23,7 @@ function say(message: string): void {
   error.textContent = message;
 }
 
-/** Counts a lockout down in place, so the wait is visible rather than mysterious. */
+/** Counts a lockout down in place, so the wait is visible instead of mysterious. */
 function holdFor(ms: number): void {
   if (retryTimer !== null) window.clearInterval(retryTimer);
 
@@ -67,8 +64,7 @@ function report(outcome: UnlockOutcome): void {
   field.disabled = false;
 
   if (outcome.reason === "corrupt") {
-    // Worth separating from a wrong passphrase: retyping will not fix it, and
-    // saying "wrong passphrase" here would send someone down the wrong path.
+    // Kept apart from a wrong passphrase; retyping will not fix this one.
     say("The passphrase was right, but the sealed data could not be opened.");
     return;
   }
@@ -95,12 +91,12 @@ form.addEventListener("submit", (event) => {
 
 nya.onState((state: VaultState) => {
   subtitle.textContent = state.sealed
-    ? "Your profile data is sealed. Enter your passphrase to open it."
+    ? "Your profile data is sealed."
     : "Enter your passphrase to continue.";
 
   warning.classList.toggle("hidden", !state.leftUnsealed);
   warning.textContent = state.leftUnsealed
-    ? "A previous session ended without sealing, so readable profile data was left on disk. It will be sealed when you next quit."
+    ? "A previous session ended without sealing. Readable data was left on disk; it will be sealed when you next quit."
     : "";
 
   if (state.retryInMs > 0) holdFor(state.retryInMs);

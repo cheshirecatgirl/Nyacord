@@ -49,16 +49,17 @@ cannot see each other. Ephemeral profiles disappear on close.
 uploads. Done by dropping requests at the network layer, not by patching the
 page. The side effects are written down in [PRIVACY.md](docs/PRIVACY.md).
 
-**An encrypted vault.** Set a passphrase and every profile's session data —
-cookies, local storage, cache, and the token Discord keeps there — is sealed
-into a single AES-256-GCM file when you quit, and opened again when you start.
-The key comes from your passphrase via scrypt and exists only while the app is
-open. There is a lock screen, manual or on idle, and no recovery: nothing here
-ever had a copy of your passphrase. It covers the powered-off case — the stolen
-laptop, the cloned drive, the old backup — and
-[SECURITY.md](docs/SECURITY.md#what-the-vault-does-not-do) is specific about
-what it cannot cover, starting with the fact that files are plaintext while the
-app is running because Chromium has them open.
+**An encrypted vault.** Set a passphrase and every profile's session data,
+including the token Discord keeps in local storage, is sealed into a single
+AES-256-GCM file when you quit and opened again when you start. The key comes
+from your passphrase via scrypt and exists only while the app is open. There is
+a lock screen, manual or on idle, and no recovery, because nothing here ever
+had a copy of your passphrase.
+
+This covers the powered-off case: the stolen laptop, the cloned drive, the old
+backup. [SECURITY.md](docs/SECURITY.md#what-the-vault-does-not-do) is specific
+about what it does not cover, starting with the fact that the files are
+plaintext while the app runs, because Chromium has them open.
 
 **A privacy inspector.** Every blocked request is listed live with its category,
 method and URL. The classifier is one pure module with unit tests over it.

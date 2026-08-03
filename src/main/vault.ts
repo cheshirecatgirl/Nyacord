@@ -37,12 +37,10 @@ import {
 import { JsonStore } from "./store";
 
 /**
- * The vault's public half.
- *
- * Deliberately a plain JSON file with no secrets in it: a salt, the KDF cost,
- * and a verifier ciphertext. Losing it to an attacker gives them nothing they
- * could not derive from the sealed file itself, and keeping it separate means
- * the app can tell "locked" from "no vault" before asking for anything.
+ * The vault's public half: a salt, the KDF cost, a verifier ciphertext. No
+ * secrets, so losing it to an attacker gives up nothing the sealed file would
+ * not. Separate from the ciphertext so the app can tell "locked" from "no
+ * vault" before asking for anything.
  */
 export interface VaultMeta {
   version: number;
@@ -75,17 +73,13 @@ function defaultMeta(): VaultMeta {
   };
 }
 
-export type UnlockResult =
-  | { ok: true }
-  | { ok: false; reason: "wrong-passphrase" | "corrupt" | "locked-out"; retryInMs?: number };
+export type UnlockResult = { ok: true } | { ok: false; reason: "wrong-passphrase" | "corrupt" };
 
 /**
  * Seals and opens a profile directory.
  *
- * The unit is the whole `session/Partitions` tree, which is where every
- * profile's cookies, localStorage, IndexedDB and cache live. Sealing the tree
- * rather than each profile keeps one key, one file and one moment where
- * plaintext is created or destroyed.
+ * The unit is the whole `session/Partitions` tree. One key, one file, and one
+ * moment where plaintext is created or destroyed.
  */
 export class ProfileVault {
   private readonly meta: JsonStore<VaultMeta>;
@@ -138,10 +132,9 @@ export class ProfileVault {
   // ------------------------------------------------------------------ enable
 
   /**
-   * Turns the vault on. The sealing itself happens at quit, because Chromium
-   * holds the profile files open for as long as it is running and a snapshot
-   * taken underneath it would be the one thing worse than no vault: a backup
-   * that looks fine and does not restore.
+   * Turns the vault on. Sealing waits for quit: Chromium holds the profile
+   * files open while it runs, and a snapshot taken underneath it would be
+   * worse than no vault at all, being a backup that does not restore.
    */
   async enable(passphrase: string): Promise<void> {
     const salt = randomBytes(SALT_BYTES);
@@ -158,11 +151,9 @@ export class ProfileVault {
   }
 
   /**
-   * Changes the passphrase without touching the data.
-   *
-   * Only the key changes, and the data is still plaintext at this point, so
-   * there is nothing to re-encrypt: the next seal uses the new key. This is
-   * also why it can only be done while unlocked.
+   * Changes the passphrase. The data is plaintext at this point, so there is
+   * nothing to re-encrypt; the next seal uses the new key. Which is also why
+   * this only works while unlocked.
    */
   async changePassphrase(current: string, next: string): Promise<boolean> {
     if (!(await this.verify(current))) return false;
@@ -199,10 +190,9 @@ export class ProfileVault {
   }
 
   /**
-   * Checks the passphrase and, if the data is sealed, opens it.
-   *
-   * A wrong passphrase is counted and the count survives a restart, so
-   * relaunching the app is not a way around the delay.
+   * Checks the passphrase and, if the data is sealed, opens it. Wrong attempts
+   * are counted and the count survives a restart, so relaunching is not a way
+   * around the delay.
    */
   async unlock(passphrase: string): Promise<UnlockResult> {
     if (!(await this.verify(passphrase))) {
@@ -236,9 +226,9 @@ export class ProfileVault {
   }
 
   /**
-   * Drops the key. The profile data stays on disk exactly as it is, because
-   * Chromium still has it open; this is a screen lock, and `docs/SECURITY.md`
-   * is explicit that it is not a re-seal.
+   * Drops the key. The data stays on disk as it is, because Chromium still has
+   * it open. This is a screen lock, not a re-seal; docs/SECURITY.md says so in
+   * as many words.
    */
   forgetKey(): void {
     this.key?.fill(0);
@@ -248,13 +238,13 @@ export class ProfileVault {
   // -------------------------------------------------------------- seal / open
 
   /**
-   * Seals the profile tree and removes the plaintext. Called at quit, after the
+   * Seals the profile tree and removes the plaintext. Called at quit, once the
    * views are gone.
    *
-   * The sealed file is written beside its destination and renamed into place,
-   * and the plaintext is removed only once that rename has succeeded. A failure
-   * anywhere in here leaves the readable copy alone: an unsealed profile is a
-   * privacy problem, but a deleted one is a lost account.
+   * Written beside the destination and renamed into place; the plaintext goes
+   * only after that rename succeeds. Any failure leaves the readable copy
+   * alone. An unsealed profile is a privacy problem, a deleted one is a lost
+   * account.
    */
   async seal(): Promise<boolean> {
     if (!this.key || !existsSync(this.plainDir)) return false;
@@ -287,7 +277,7 @@ export class ProfileVault {
 
     try {
       // Chromium may still hold handles here. Retries cover the ordinary case;
-      // if it genuinely cannot be removed we record that rather than pretend.
+      // if it truly cannot be removed we record that instead of pretending.
       rmSync(this.plainDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     } catch (error) {
       console.error("[nya] sealed, but could not remove the plaintext:", error);
@@ -302,12 +292,10 @@ export class ProfileVault {
   }
 
   /**
-   * Decrypts into a staging directory, verifies the tag, and only then moves it
-   * into place.
-   *
-   * Streaming straight into the destination would mean writing plaintext that
-   * has not been authenticated yet, so a truncated or tampered vault would
-   * leave a half-extracted profile behind before the failure was noticed.
+   * Decrypts into a staging directory, verifies the tag, then moves it into
+   * place. Streaming straight into the destination would write plaintext that
+   * had not been authenticated yet, leaving a half-extracted profile behind
+   * whenever a vault turned out to be truncated or tampered with.
    */
   private async openSealed(): Promise<void> {
     if (!this.key) throw new Error("no key");
@@ -358,7 +346,7 @@ export class ProfileVault {
   /**
    * Called at startup when a vault exists. If plaintext is sitting next to a
    * sealed file, a previous run died before sealing; the plaintext is the newer
-   * copy, so it wins and the stale sealed file is set aside rather than used.
+   * copy, so it wins and the stale sealed file is set aside, not used.
    */
   noteStartupState(): void {
     if (!this.enabled) return;
@@ -374,11 +362,8 @@ export class ProfileVault {
 
 /**
  * Walks the tree depth-first, yielding a header for every entry and the bytes
- * of every file.
- *
- * A generator rather than a list because a profile with a warm cache is
- * hundreds of megabytes: nothing here should ever hold a whole file, let alone
- * a whole profile, in memory.
+ * of every file. A generator, not a list: a profile with a warm cache runs to
+ * hundreds of megabytes and none of it should be resident.
  */
 async function* entries(root: string): AsyncGenerator<Buffer> {
   async function* walk(dir: string): AsyncGenerator<Buffer> {
@@ -394,9 +379,9 @@ async function* entries(root: string): AsyncGenerator<Buffer> {
         continue;
       }
 
-      // Symlinks and sockets are skipped rather than followed. Chromium does
-      // not put them in a partition, and following one would seal something
-      // from outside the tree.
+      // Symlinks and sockets are skipped, not followed. Chromium does not put
+      // them in a partition, and following one would seal something outside
+      // the tree.
       if (!child.isFile()) continue;
 
       const info = await stat(absolute);
@@ -405,9 +390,9 @@ async function* entries(root: string): AsyncGenerator<Buffer> {
       let written = 0;
       for await (const chunk of createReadStream(absolute)) {
         const buffer = chunk as Buffer;
-        // The size went into the header before the read started, so a file
-        // being appended to underneath us has to be trimmed or padded rather
-        // than allowed to desynchronize every entry after it.
+        // The size went into the header before the read began. A file being
+        // appended to underneath us gets trimmed or padded; letting it run
+        // long would desynchronize every entry after it.
         const room = info.size - written;
         if (room <= 0) break;
         yield buffer.length > room ? buffer.subarray(0, room) : buffer;

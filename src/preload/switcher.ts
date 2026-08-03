@@ -4,18 +4,15 @@ import type { SidebarTabId } from "../common/appearance";
 import { IPC, type SwitcherState } from "../common/ipc";
 
 /**
- * The switcher strip's bridge: two methods, because the strip does two things.
- *
- * It is a separate bridge from the settings panel's on purpose. The strip is
- * the one piece of our UI that sits over Discord's page all the time, so it
- * gets the smallest surface in the application rather than the largest.
+ * The switcher strip's bridge. Separate from the settings panel's: the strip
+ * is the one piece of our UI that sits over Discord's page all the time, so it
+ * gets the smallest surface in the app.
  */
 const api = {
   /**
-   * `restoreFocus` hands focus back to the Discord view after the change.
-   * A click on the strip focuses it, which would otherwise mean the message
-   * box quietly stops receiving keystrokes. Keyboard selection passes false,
-   * because yanking focus away mid-arrow-key is the opposite of helpful.
+   * `restoreFocus` returns focus to Discord after the change. Clicking the
+   * strip focuses it, which would otherwise stop the message box taking
+   * keystrokes. Keyboard selection passes false so arrow keys keep working.
    */
   select: (tab: SidebarTabId, restoreFocus: boolean): Promise<boolean> =>
     ipcRenderer.invoke(IPC.setActiveTab, tab, restoreFocus),

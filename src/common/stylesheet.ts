@@ -1,21 +1,18 @@
 /**
- * The unified layout's stylesheet, split into the parts that apply always and
- * the parts that apply to one side of the switcher.
+ * Splits the unified layout's stylesheet into what applies always and what
+ * applies to one side of the switcher.
  *
- * Switching sides cannot set a class on Discord's page, because that would
- * mean running script in it. Instead the main process injects a different
- * stylesheet per side and removes the previous one. So the file is one
- * document with marked sections, and this module picks the sections that
- * belong to the current side.
+ * Switching sides cannot set a class on Discord's page without running script
+ * in it, so the main process injects a different stylesheet per side and
+ * removes the previous one. The file is one document with marked sections:
  *
- * The format is deliberately dull, because you will be editing it with
- * DevTools open when Discord next changes its markup:
+ *     [shared]    both sides
+ *     [dms]       the direct messages side
+ *     [servers]   the servers side
  *
- *     [shared]    rules that apply on both sides
- *     [dms]       rules for the direct messages side
- *     [servers]   rules for the servers side
- *
- * Anything before the first marker is treated as shared.
+ * Anything before the first marker counts as shared. The format stays dull
+ * because you will be editing it with DevTools open the next time Discord
+ * changes its markup.
  */
 
 import type { SidebarTabId } from "./appearance";
@@ -54,10 +51,9 @@ export function composeLayoutCss(sheet: LayoutStylesheet, tab: SidebarTabId): st
 }
 
 /**
- * A stylesheet that matches nothing is the normal state after Discord changes
- * its markup, and it is indistinguishable from a working one at the CSS level.
- * The only thing we can check cheaply is whether the file still contains
- * anything to apply, which catches an empty or truncated file.
+ * A stylesheet whose selectors match nothing looks identical to a working one
+ * from here. All this catches is an empty or truncated file, which is still
+ * worth knowing: it is what tells the app to drop the switcher strip.
  */
 export function isEmptyStylesheet(sheet: LayoutStylesheet): boolean {
   return !sheet.shared && !sheet.dms && !sheet.servers;

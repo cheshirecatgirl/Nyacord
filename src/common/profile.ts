@@ -3,28 +3,22 @@ import type { ProxyConfig } from "./network";
 import type { PrivacyPolicy } from "./policy";
 
 /**
- * A profile is the unit of isolation. It owns a Chromium session partition,
- * which means its own cookies, localStorage, IndexedDB, cache and service
- * workers. Two profiles cannot see each other, so "work account on Stable" and
- * "personal account on Canary" are separate identities, not two tabs
- * sharing a login.
+ * The unit of isolation. A profile owns a Chromium session partition: its own
+ * cookies, localStorage, IndexedDB, cache and service workers. Two profiles
+ * cannot see each other, so "work on Stable" and "personal on Canary" are
+ * separate identities, not two tabs sharing a login.
  */
 export interface Profile {
   readonly id: string;
   name: string;
   channel: ChannelId;
-  /**
-   * Ephemeral profiles use an in-memory partition, so session, cache and
-   * storage all vanish when the profile closes. Use it on a machine that is
-   * not yours.
-   */
+  /** In-memory partition: session, cache and storage vanish on close. */
   ephemeral: boolean;
   /** Optional per-profile override; when absent the global policy applies. */
   policy?: PrivacyPolicy;
   /**
-   * Egress for this profile. Proxies are a session-level setting in Chromium,
-   * which makes a profile exactly the right granularity: one identity can go
-   * out over Tor or a VPN while another goes out directly.
+   * Egress. Chromium attaches proxies to sessions, which makes a profile the
+   * right granularity: one identity over Tor, another direct.
    */
   proxy?: ProxyConfig;
   /** Injected as a user stylesheet. CSS only, never script. See docs/SECURITY.md. */
@@ -58,9 +52,9 @@ export function newProfileId(random: () => string): string {
 }
 
 /**
- * Discord writes the unread count into the document title, as `(3) #general`.
- * Reading it costs nothing and needs no script injection, which is why the
- * badge works at all in a client that refuses to run code inside the page.
+ * Discord writes the unread count into the document title as `(3) #general`.
+ * Reading it needs no script injection, which is how a client that runs no
+ * code in the page has a badge at all.
  */
 export function parseBadgeFromTitle(title: string): number {
   const match = /^\((\d+)\)/.exec(title.trim());

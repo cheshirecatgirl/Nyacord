@@ -205,7 +205,7 @@ export class AppShell {
     const background = chromeBackground();
     this.window.setBackgroundColor(background);
     for (const entry of this.views.values()) entry.view.setBackgroundColor(background);
-    // The strip paints on Discord's background rather than its own, so the OS
+    // The strip paints on Discord's background, not its own, so the OS
     // theme is the only hint it has about what is behind it.
     this.pushSwitcher();
   }
@@ -216,13 +216,13 @@ export class AppShell {
   }
 
   /**
-   * Tears down every profile view so the vault can take a snapshot that is not
-   * being written to as it is read.
+   * Tears down every profile view so the vault snapshots something that is not
+   * being written as it is read.
    *
-   * This does not make the files closed — Electron has no way to destroy a
-   * session, so Chromium keeps its handles until the process ends. What it does
-   * is stop new writes, which is the difference between sealing a profile and
-   * sealing a profile mid-transaction.
+   * The files are not closed by this; Electron cannot destroy a session, so
+   * Chromium keeps its handles until the process ends. It stops new writes,
+   * which is the difference between sealing a profile and sealing one
+   * mid-transaction.
    */
   prepareForSeal(): void {
     this.stopIdleTimer();
@@ -232,10 +232,10 @@ export class AppShell {
   /**
    * Brings the app up, behind the lock screen if there is a vault.
    *
-   * No profile view is created while locked, which is the point: a
-   * `WebContentsView` on a `persist:` partition makes Chromium open that
-   * partition's directory, and the whole design is that the directory does not
-   * exist in readable form until a passphrase has been given.
+   * No profile view is created while locked. A `WebContentsView` on a
+   * `persist:` partition makes Chromium open that partition's directory, and
+   * the directory should not exist in readable form until a passphrase has
+   * been given.
    */
   start(): void {
     if (this.vault.enabled && !this.vault.open) {
@@ -268,11 +268,9 @@ export class AppShell {
   }
 
   /**
-   * How long the running app will refuse another attempt.
-   *
-   * This is a courtesy to a real user who mistyped, not a defence: someone with
-   * the sealed file guesses against their own hardware with no app in the way,
-   * which is what the KDF cost in `common/vault.ts` is for.
+   * How long the running app refuses another attempt. A courtesy to someone
+   * who mistyped, not a defence; anyone holding the sealed file guesses
+   * against their own hardware, which the KDF cost is what answers.
    */
   private retryInMs(): number {
     const wait = lockoutMs(this.vault.failures);
@@ -293,7 +291,7 @@ export class AppShell {
     }
 
     this.hideLock();
-    // Profiles may already exist if this was a re-lock rather than a cold start.
+    // Profiles may already exist if this was a re-lock, not a cold start.
     if (this.views.size === 0) this.startProfiles();
     else this.armIdleTimer();
 
@@ -303,15 +301,13 @@ export class AppShell {
   }
 
   /**
-   * Re-locks a running app.
+   * Re-locks a running app: the key is dropped and the screen goes up. The
+   * files are not re-sealed, since Chromium still has them open; that waits
+   * for quit, and docs/SECURITY.md says so instead of letting the padlock
+   * imply more.
    *
-   * The key is dropped and the screen goes up, but the profile data on disk is
-   * not re-sealed, because Chromium still has those files open. Sealing happens
-   * at quit. `docs/SECURITY.md` states this plainly rather than letting the
-   * padlock imply more than it does.
-   *
-   * The views are kept alive on purpose, so the gateway connection survives and
-   * notifications keep arriving while the screen is locked.
+   * Views stay alive, so the gateway connection survives and notifications
+   * keep arriving behind the lock.
    */
   lockNow(): boolean {
     if (!this.vault.enabled) return false;
@@ -376,10 +372,9 @@ export class AppShell {
   }
 
   /**
-   * Auto-lock uses the OS idle time rather than anything observed in Discord's
-   * page. There is no preload there to report activity, and asking the system
-   * how long the keyboard and mouse have been quiet is both more accurate and
-   * less invasive than inferring it.
+   * Auto-lock reads the OS idle time. Discord's page has no preload to report
+   * activity from, and asking the system how long the keyboard and mouse have
+   * been quiet is more accurate than inferring it anyway.
    */
   private armIdleTimer(): void {
     this.stopIdleTimer();
@@ -454,7 +449,7 @@ export class AppShell {
         ...HARDENED_PREFS,
         session: ses,
         spellcheck: policy().spellcheck,
-        // Deliberately no `preload`. Nothing of ours runs inside Discord's
+        // No `preload`, and that is the point. Nothing of ours runs inside Discord's
         // page, so there is no bridge for a compromised renderer to abuse and
         // nothing that could be mistaken for client modification.
       },
@@ -478,11 +473,10 @@ export class AppShell {
 
     /**
      * The strip follows navigation, so opening a DM from a notification moves
-     * it to the DMs side instead of leaving you on a side whose list is hidden.
+     * it to the DMs side instead of leaving a hidden list selected.
      *
-     * The URL is the only thing read here. Discord's routes are URLs, so
-     * `/channels/@me/…` and `/channels/<id>/…` already say which side you are
-     * on without anything of ours running in the page.
+     * Only the URL is read. `/channels/@me/…` and `/channels/<id>/…` already
+     * say which side you are on, with nothing of ours in the page.
      */
     const follow = (url: string): void => {
       if (this.profiles.activeId() !== profile.id) return;
@@ -657,10 +651,9 @@ export class AppShell {
   // -------------------------------------------------------------- switcher
 
   /**
-   * Changes which side of the switcher is showing.
-   *
-   * This is the only write path for the active tab, so the strip, the settings
-   * panel and navigation all converge on one place and cannot disagree.
+   * Changes which side of the switcher is showing. The only write path for the
+   * active tab, so the strip, the settings panel and navigation converge here
+   * and cannot disagree.
    */
   setActiveTab(tab: SidebarTabId, restoreFocus = false): void {
     if (this.config.get().appearance.activeTab !== tab) {
@@ -684,13 +677,11 @@ export class AppShell {
   }
 
   /**
-   * Attaches or detaches the strip to match the current layout.
-   *
-   * It exists only under Unified, only while there is a Discord view for it to
-   * sit over, and only while the stylesheet is actually reserving room for it.
-   * That last condition is what keeps emptying the stylesheet a clean way back
-   * to plain Discord: without it, the strip would go on floating over the top
-   * of the server rail with nothing underneath having moved aside for it.
+   * Attaches or detaches the strip to match the current layout: only under
+   * Unified, only with a Discord view to sit over, and only while the
+   * stylesheet is reserving room for it. That last one keeps emptying the
+   * stylesheet a clean way back to plain Discord, instead of leaving a strip
+   * floating over a server rail that never moved aside.
    */
   private syncSwitcher(): void {
     const wanted =
@@ -752,9 +743,9 @@ export class AppShell {
   // ----------------------------------------------------------------- layout
 
   /**
-   * Puts the overlays back on top after a view has been added underneath them.
+   * Puts the overlays back on top after a view is added underneath them.
    * `addChildView` moves an existing child to the front, so swapping profiles
-   * would otherwise bury the strip and the panel behind the Discord view.
+   * would otherwise bury the strip and the panel.
    */
   private raiseOverlays(): void {
     if (this.switcherShown && this.switcher) {

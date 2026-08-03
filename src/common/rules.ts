@@ -1,7 +1,7 @@
 /**
  * The request classifier.
  *
- * This module is deliberately pure: it takes a URL, a method and a Chromium
+ * The module is pure: it takes a URL, a method and a Chromium
  * resource type, and returns a verdict. No Electron, no I/O. That makes the
  * blocking behaviour of the client directly unit-testable, which is the whole
  * point: the blocking behaviour has to be verifiable without launching a

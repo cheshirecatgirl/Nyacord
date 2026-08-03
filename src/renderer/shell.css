@@ -138,10 +138,6 @@ body {
   padding: 18px;
 }
 
-.pane.hidden {
-  display: none;
-}
-
 /* -------------------------------------------------------------- primitives */
 
 button {
@@ -177,6 +173,27 @@ button.danger {
   color: var(--danger);
 }
 
+button.danger:hover {
+  background: rgba(255, 139, 139, 0.1);
+  border-color: rgba(255, 139, 139, 0.35);
+}
+
+.tab,
+button,
+input:not([type="checkbox"]),
+select {
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}
+
 h3 {
   margin: 0 0 8px;
   font-size: 11px;
@@ -195,16 +212,12 @@ h3.spaced {
 }
 
 /*
- * Every `.hidden` rule here used to be scoped to one component, so a plain
- * `<div class="hidden">` stayed visible. The generic rule is the default; the
- * scoped ones below stay because they have to out-specify a `display` their own
- * component sets.
+ * Every `.hidden` rule used to be scoped to one component, so a plain
+ * `<div class="hidden">` stayed visible. This is the default now. The only
+ * scoped copy still needed is `.row.hidden`, which has to out-specify the
+ * `display: flex` that `.row` sets further down.
  */
 .hidden {
-  display: none;
-}
-
-.notice.hidden {
   display: none;
 }
 
@@ -224,9 +237,16 @@ h3.spaced {
   color: var(--danger);
 }
 
+/*
+ * Solid red for a whole paragraph reads as an error that already happened.
+ * This is a consequence to understand before acting, so it gets a red rule and
+ * ordinary text.
+ */
 .danger-note {
-  margin-top: 12px;
-  color: var(--danger);
+  margin: 14px 0 0;
+  padding-left: 11px;
+  border-left: 2px solid var(--danger);
+  color: var(--muted);
 }
 
 .strength-weak {
@@ -268,9 +288,9 @@ ul {
 }
 
 /*
- * Matched by exclusion rather than by listing types. Keyed on
- * `input[type="text"]`, the vault's password fields arrived completely
- * unstyled, and the next input type added would have done the same.
+ * Matched by exclusion, not by listing types. Keyed on `input[type="text"]`,
+ * the vault's password fields arrived completely unstyled, and so would the
+ * next input type anyone added.
  */
 input:not([type="checkbox"]),
 select {

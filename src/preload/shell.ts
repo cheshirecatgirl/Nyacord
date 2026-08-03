@@ -16,7 +16,7 @@ import type { PrivacyPolicy } from "../common/policy";
  * The only bridge in the application, attached to our own local UI. Never to
  * Discord.
  *
- * Each method is a named, fixed-arity wrapper. There is deliberately no
+ * Each method is a named, fixed-arity wrapper. There is no
  * generic `invoke(channel, …)`: if a future feature needs a new capability it
  * has to be added here and in `common/ipc.ts`, which makes the privileged
  * surface reviewable as a diff.
@@ -53,7 +53,7 @@ const api = {
 
 
   /**
-   * Vault management. `unlock` is deliberately absent: that belongs to the lock
+   * Vault management. `unlock` is absent by design: that belongs to the lock
    * screen, whose bridge cannot do anything else. The panel only exists while
    * the vault is already open.
    */

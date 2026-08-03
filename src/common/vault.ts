@@ -2,33 +2,16 @@
  * The vault format: what a passphrase turns into, and what a sealed profile
  * looks like on disk.
  *
- * Everything here is pure and uses only `node:crypto`, so the whole format is
- * unit-testable without Electron and without touching a real profile.
+ * Pure, and depends only on `node:crypto`, so the format is testable without
+ * Electron and without a real profile.
  *
- * ---------------------------------------------------------------------------
- * WHAT IS PROTECTED
+ * Sealed, a profile is one AES-256-GCM ciphertext holding its cookies,
+ * localStorage (Discord's token lives there), IndexedDB, cache and service
+ * workers. The key exists only while the app is open.
  *
- * A profile's Chromium session partition: its cookies, localStorage (which is
- * where Discord keeps your token), IndexedDB, cache and service workers. That
- * is the whole of "your Discord data" as it exists on this machine.
- *
- * Sealed, it is a single AES-256-GCM ciphertext whose key exists only while you
- * are using the app. Someone who takes the disk, the backup, or the whole
- * machine while it is off gets an authenticated blob and a salt.
- *
- * ---------------------------------------------------------------------------
- * WHAT IS NOT, AND WHY IT CANNOT BE
- *
- * While the app is unlocked, Chromium is reading and writing those files, so
- * they are plaintext on disk for as long as the app is running. No wrapper can
- * change that: Chromium has no hook to encrypt its own storage writes, and a
- * client that could not hand it real files could not run at all.
- *
- * This is the same shape of limit every "encrypted profile" browser has,
- * whether or not it says so. What the vault buys is the powered-off case, which
- * is also the case that covers a stolen laptop, a cloned drive and a stale
- * backup. `docs/SECURITY.md` says where the line is, and recommends full-disk
- * encryption as the complement rather than pretending not to need it.
+ * The limit is that Chromium reads and writes those files directly, so between
+ * unlock and quit they are plaintext on disk. Nothing in a wrapper can change
+ * it, and docs/SECURITY.md sets out what that does and does not cover.
  */
 
 import {
@@ -41,7 +24,7 @@ import {
 } from "node:crypto";
 
 /**
- * Hand-wrapped rather than `promisify`d: the callback form has two overloads
+ * Hand-wrapped, not `promisify`d: the callback form has two overloads
  * and `promisify` resolves to the one without an options argument, which is the
  * one that cannot express the cost parameters this whole file is about.
  */
@@ -59,24 +42,20 @@ function scrypt(
   });
 }
 
-export const VAULT_MAGIC = "NYAVAULT";
 export const VAULT_VERSION = 1;
 
 const KEY_BYTES = 32;
-const IV_BYTES = 12;
-const TAG_BYTES = 16;
 export const SALT_BYTES = 16;
-
-/** GCM's tag is the last thing written, so unsealing has to seek for it. */
-export const VAULT_TAG_BYTES = TAG_BYTES;
+export const IV_BYTES = 12;
+/** GCM writes its tag last, so unsealing has to seek to the end for it. */
+export const VAULT_TAG_BYTES = 16;
 
 /**
- * scrypt cost. `logN` 17 is 128 MiB and roughly a second on a current laptop:
- * chosen so that guessing is expensive on the hardware an attacker would
- * actually use, where memory is the scarce resource rather than cores.
+ * scrypt cost. logN 17 is 128 MiB and about a second, which puts the expense
+ * on memory, the scarce resource on a guessing rig.
  *
- * It is stored per vault rather than hardcoded, so raising it later does not
- * strand vaults written by an older build.
+ * Stored per vault, not hardcoded, so raising it later leaves older vaults
+ * openable.
  */
 export interface KdfParams {
   readonly logN: number;
@@ -113,19 +92,16 @@ export async function deriveKey(
     r: params.r,
     p: params.p,
     // Node's default cap is 32 MiB, which every parameter set worth using
-    // exceeds. Sized from the parameters rather than a constant so raising
+    // exceeds. Sized from the parameters, not fixed, so raising
     // logN does not start throwing.
     maxmem: 256 * N * params.r,
   });
 }
 
 /**
- * A small ciphertext that proves a passphrase is right without unsealing
- * anything.
- *
- * Without it, a wrong passphrase would only be discovered after streaming the
- * entire archive, so the UI could not tell "wrong passphrase" from "corrupt
- * vault" and every attempt would cost the whole file.
+ * A small ciphertext that proves a passphrase without unsealing anything.
+ * Without it, every wrong attempt would cost a full pass over the archive and
+ * still could not tell a bad passphrase from a corrupt vault.
  */
 export interface Verifier {
   readonly iv: string;
@@ -168,9 +144,8 @@ export function checkVerifier(key: Buffer, verifier: Verifier): boolean {
 // --------------------------------------------------------------- the archive
 
 /**
- * The sealed body is a flat sequence of entries. There is no directory tree in
- * the format; parents are created as needed on the way out, which is one less
- * thing to get wrong than a nested format.
+ * The sealed body is a flat sequence of entries. No directory tree in the
+ * format; parents are created as needed on the way out.
  *
  *   u16   path length          (bytes, UTF-8)
  *   ...   path, POSIX separators, relative to the sealed root
@@ -210,9 +185,8 @@ export function encodeEntry(entry: EntryHeader): Buffer {
 }
 
 /**
- * Reads one entry header, or reports that more bytes are needed. The unsealing
- * side is fed arbitrary chunk boundaries by the decipher stream, so "not yet"
- * has to be an ordinary answer rather than an error.
+ * Reads one entry header, or asks for more bytes. The decipher stream picks
+ * its own chunk boundaries, so "not yet" is an ordinary answer, not an error.
  */
 export function decodeEntry(buffer: Buffer): { entry: EntryHeader; read: number } | null {
   if (buffer.length < 2) return null;
@@ -240,10 +214,9 @@ export function decodeEntry(buffer: Buffer): { entry: EntryHeader; read: number 
 }
 
 /**
- * Paths out of a vault are untrusted: the file may have been written by
- * something other than us, or edited to point somewhere else. Anything that
- * could escape the extraction root is refused rather than sanitized, because a
- * sanitized traversal is still a file the user did not expect.
+ * Paths out of a vault are untrusted; the file may not have been written by
+ * us. Anything that could escape the extraction root is refused, not
+ * sanitized. A sanitized traversal still lands a file nobody asked for.
  */
 export function isSafeEntryPath(path: string): boolean {
   if (path.length === 0 || path.length > MAX_PATH_BYTES) return false;
@@ -253,5 +226,3 @@ export function isSafeEntryPath(path: string): boolean {
   if (path.includes("\\")) return false;
   return path.split("/").every((part) => part !== "" && part !== "." && part !== "..");
 }
-
-export { KEY_BYTES, IV_BYTES, TAG_BYTES };

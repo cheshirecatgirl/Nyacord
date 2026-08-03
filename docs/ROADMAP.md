@@ -49,8 +49,8 @@ it, and all three of our pages load with no page errors or CSP violations.
 The vault's own suite is separate and does the round trip for real: it seals a
 profile tree, checks the plaintext is gone and that no recognizable bytes
 survive in the ciphertext, opens it again and compares every file, flips a byte
-to confirm a tampered vault is refused rather than half-extracted, and checks
-that turning the vault off while the data is still sealed is refused — because
+to confirm a tampered vault is refused instead of half-extracted, and checks
+that turning the vault off while the data is still sealed is refused, since
 otherwise that button would quietly mean "delete my account".
 
 ## The unified layout
@@ -86,7 +86,7 @@ the URL-to-context reader, and the whole injection path. The stylesheet is
 seeded into the data directory, injected on the profile view, swapped when the
 side changes, removed under Classic, and reloaded when the file is saved. The
 strip is attached under Unified and detached under Classic, and the gap it fills
-is measured against its real height rather than written down twice. All of that
+is measured against its real height instead of written down twice. All of that
 is checked against a running app.
 
 **Not verified, and cannot be from a machine that cannot reach Discord:**
@@ -143,10 +143,9 @@ the zero-dependency property) or a PipeWire path through
 
 **Re-sealing on lock, not only on quit.** Today *lock now* drops the key and
 covers the screen; the files stay readable until you quit. Sealing a running app
-would mean releasing Chromium's handles on the partition, and Electron has no
-way to destroy a session, so this needs either a way to tear a session down or a
-move to a RAM-backed working directory. Worth doing, not worth faking, and
-`docs/SECURITY.md` says plainly which one is shipping.
+means releasing Chromium's handles on the partition, and Electron has no way to
+destroy a session, so this needs either a teardown path or a RAM-backed working
+directory. `docs/SECURITY.md` says plainly which one is shipping.
 
 **Vault coverage for `config.json`.** Settings, profile names and proxy rules
 sit outside the vault because the policy has to be read before Chromium starts,

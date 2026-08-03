@@ -42,7 +42,7 @@ export function defaultConfig(): NyaConfig {
     version: CONFIG_VERSION,
     policy: balancedPolicy(),
     /**
-     * Deliberately not a specific provider. Routing every lookup to a resolver
+     * Not a specific provider. Routing every lookup to a resolver
      * we picked would move your DNS from one third party to another of our
      * choosing, without asking. `automatic` upgrades to DoH when your own
      * resolver supports it; naming a server is opt-in.

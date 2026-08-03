@@ -3,16 +3,12 @@ import { contextBridge, ipcRenderer } from "electron";
 import { IPC, type UnlockOutcome, type VaultState } from "../common/ipc";
 
 /**
- * The lock screen's bridge.
+ * The lock screen's bridge: attempt an unlock, be told the vault's public
+ * state. It cannot enumerate profiles, read the ledger, change policy or
+ * dismiss itself.
  *
- * It can attempt an unlock and be told the vault's public state. It cannot
- * enumerate profiles, read the ledger, change policy, or close itself: a screen
- * whose whole job is to stand between someone and your account should not also
- * be the widest surface in the app.
- *
- * The passphrase crosses this bridge in the clear, which is correct. The main
- * process is the only place a key may exist, so the renderer's job is to hand
- * the characters over and keep none of them.
+ * The passphrase crosses in the clear, which is right. Keys exist only in the
+ * main process, so the renderer hands the characters over and keeps none.
  */
 const api = {
   unlock: (passphrase: string): Promise<UnlockOutcome> =>

@@ -67,10 +67,9 @@
 
         <section class="pane hidden" data-pane="vault" data-title="Vault &amp; Lock">
           <p class="hint">
-            Encrypts every profile's session data — cookies, local storage,
-            cache, and the token Discord keeps there — into a single sealed file
-            when you quit. The key is derived from your passphrase and exists
-            only while the app is open.
+            Seals every profile's cookies, storage and cache into one
+            encrypted file when you quit. The key comes from your passphrase
+            and lives only while the app is open.
           </p>
 
           <div id="vault-status" class="notice"></div>
@@ -78,8 +77,8 @@
           <div id="vault-off">
             <h3>Set a passphrase</h3>
             <p class="hint">
-              A sealed file can be guessed at offline, with no app in the way, so
-              length is what protects it. Use a phrase, not a PIN.
+              A sealed file is guessed at offline, so length is what protects
+              it. Use a phrase, not a PIN.
             </p>
             <div class="row">
               <input id="vault-new" type="password" placeholder="Passphrase" autocomplete="off" />
@@ -96,19 +95,17 @@
               <span id="vault-strength" class="sub grow"></span>
               <button id="vault-enable" class="primary">Turn on the vault</button>
             </div>
-            <p class="hint danger-note">
-              There is no recovery. Nyacord never stores your passphrase, so
-              nobody — including us — can reset it. Forgetting it means the
-              profile data is gone.
+            <p class="danger-note">
+              No recovery. Your passphrase is never stored, so it cannot be
+              reset. Forget it and the profile data is gone.
             </p>
           </div>
 
           <div id="vault-on" class="hidden">
             <h3>Auto-lock</h3>
             <p class="hint">
-              Shows the lock screen after the machine has been idle this long.
-              Locking hides everything and drops the key; it does not re-seal the
-              files, which happens when you quit.
+              Shows the lock screen after this much idle time. Locking drops the
+              key and covers the screen; files are sealed when you quit.
             </p>
             <div class="row">
               <select id="vault-autolock" aria-label="Auto-lock after">
@@ -145,10 +142,7 @@
             </div>
 
             <h3 class="spaced">Turn the vault off</h3>
-            <p class="hint">
-              Leaves your profile data readable on disk. Only possible while it
-              is open.
-            </p>
+            <p class="hint">Leaves profile data readable on disk.</p>
             <div class="row">
               <input
                 id="vault-disable-pass"

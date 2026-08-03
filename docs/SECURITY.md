@@ -31,7 +31,7 @@ experimentalFeatures: false       navigateOnDragDrop: false
 `app.enableSandbox()` is called before ready, so the sandbox is the process-wide
 default, not something each window has to remember.
 
-`backgroundThrottling` is deliberately **false**. It is the one setting here
+`backgroundThrottling` is **false** on purpose. It is the one setting here
 chosen for behaviour, not security: throttling the renderer breaks
 notification delivery and voice keepalives when the window is not focused, and
 a chat client that silently stops delivering messages when minimized is not a
@@ -40,9 +40,10 @@ chat client.
 ## The vault
 
 Turning the vault on sets a passphrase. From then on, quitting seals
-`session/Partitions` — every profile's cookies, localStorage (where Discord
-keeps your token), IndexedDB, cache and service workers — into a single
-encrypted file, and starting up asks for the passphrase to open it again.
+`session/Partitions` into a single encrypted file, and starting up asks for the
+passphrase to open it again. That tree holds every profile's cookies,
+localStorage (where Discord keeps your token), IndexedDB, cache and service
+workers.
 
 | | |
 | --- | --- |
@@ -52,35 +53,33 @@ encrypted file, and starting up asks for the passphrase to open it again.
 | Where the key lives | Main-process memory, from unlock until seal or lock |
 | Recovery | None. No escrow, no hint, no reset. |
 
-Two details worth the space:
+Two details worth stating:
 
 **Unsealing stages first.** Decrypting straight into the profile directory
 would write plaintext that had not been authenticated yet, so a truncated or
 tampered file would leave a half-extracted profile behind before the tag check
-failed. Instead it extracts to `Partitions.opening`, verifies, and only then
-renames it into place.
+failed. It extracts to `Partitions.opening`, verifies, then renames into place.
 
 **Entry paths out of a vault are untrusted.** The file may not have been
-written by us. Anything that could escape the extraction root — absolute paths,
-`..`, drive letters, backslashes — is refused rather than sanitized.
+written by us. Anything that could escape the extraction root is refused, not
+sanitized: absolute paths, `..`, drive letters, backslashes.
 
 ### What the vault does not do
 
-**It is not encryption while the app is running.** Chromium is reading and
-writing those files, so between unlock and quit they are plaintext on disk. No
-wrapper can change that: Chromium exposes no hook to encrypt its own storage
-writes, and a client that could not hand it real files could not run. This is
-the same limit every "encrypted profile" browser has, whether or not it says
-so.
+**It is not encryption while the app is running.** Chromium reads and writes
+those files, so between unlock and quit they are plaintext on disk. No wrapper
+can change that: Chromium exposes no hook to encrypt its own storage writes,
+and a client that could not hand it real files could not run. Every "encrypted
+profile" browser has this limit, whether or not it says so.
 
-What the vault buys is the powered-off case — which is also the stolen laptop,
-the cloned drive, and the backup that outlives the machine.
+What the vault buys is the powered-off case: the stolen laptop, the cloned
+drive, the backup that outlives the machine.
 
 **Locking is not sealing.** *Lock now* and auto-lock drop the key and put an
-opaque screen over everything, so the app stops being readable to someone at
-the keyboard. They do not re-encrypt the files, because Electron cannot destroy
-a session and Chromium keeps its handles until the process ends. Sealing
-happens at quit.
+opaque screen over everything, so nothing is readable to someone at the
+keyboard. They do not re-encrypt the files: Electron cannot destroy a session,
+and Chromium keeps its handles until the process ends. Sealing happens at
+quit.
 
 **It does not protect against someone who is already running code as you.**
 Malware in your user account can read the plaintext while the app is open, or
@@ -92,39 +91,39 @@ proxy configuration. No Discord data is in there, but the file does reveal that
 you use the app and what you called your profiles.
 
 **Use full-disk encryption as well.** FileVault, BitLocker or LUKS covers the
-running window, the swap file, and everything the vault deliberately leaves
-outside itself. The vault is worth having on top — it survives a machine that
-was left logged in — but it is not a replacement.
+running window, the swap file, and everything the vault leaves outside itself.
+The vault is still worth having on top, since it survives a machine left logged
+in, but it is not a replacement.
 
 ## Is Chromium itself hardened?
 
-Mostly yes, by inheritance, with two gaps that are worth naming.
+Mostly yes, by inheritance, with two gaps.
 
 **What comes for free.** The renderer sandbox (seccomp-bpf on Linux, App
 Container on Windows, Seatbelt on macOS), site isolation, the V8 sandbox,
 partitioned network state, ASLR, CFI and stack protection. This is the most
 attacked codebase on the planet and it shows; it is the main reason this
-project is a shell around Chromium rather than a reimplementation of anything.
+project is a shell around Chromium and not a reimplementation of anything.
 
 **What we add.** `app.enableSandbox()` before ready, `site-per-process` stated
 explicitly so a default flip cannot cost it silently, `HARDENED_PREFS` on every
-view, no preload on Discord's, and the fuses in `build/afterPack.cjs` — which
-matter more than they sound. `ELECTRON_RUN_AS_NODE` turns any stock Electron
-binary into a general-purpose Node interpreter, and `NODE_OPTIONS` injects a
-module into the process from the environment. Both are off, along with
-`--inspect`, plus ASAR integrity validation and `OnlyLoadAppFromAsar`.
+view, no preload on Discord's, and the fuses in `build/afterPack.cjs`. Those
+last ones matter more than they sound: `ELECTRON_RUN_AS_NODE` turns any stock
+Electron binary into a general-purpose Node interpreter, and `NODE_OPTIONS`
+injects a module into the process from the environment. Both are off, along
+with `--inspect`, plus ASAR integrity validation and `OnlyLoadAppFromAsar`.
 
 **Gap one: patch lag.** Electron ships a Chromium branch and picks up security
 fixes when Electron cuts a release. Chrome updates faster. There is no way for
-a downstream project to close this; the honest mitigation is to track Electron
-releases and rebuild, which is a maintenance commitment rather than a feature.
+a downstream project to close this. The mitigation is to track Electron
+releases and rebuild, which is a maintenance commitment, not a feature.
 
 **Gap two: Safe Browsing is off,** because it is a background service that
 reports to Google, and blocking it is squarely what this project is for. The
-practical cost is smaller than it looks: navigation containment means the
-Discord view cannot leave Discord's host, and every external link opens in your
-real browser, which has its own Safe Browsing. But a malicious link is
-classified by your browser, not by us.
+practical cost is smaller than it looks: navigation containment keeps the
+Discord view on Discord's host, and every external link opens in your real
+browser, which has its own Safe Browsing. But a malicious link gets classified
+by your browser, not by us.
 
 Component updates are off for the same reason, which also means CRLSet
 revocation data goes stale. TLS still verifies against the OS trust store;
@@ -133,15 +132,15 @@ revocation checking is the part that degrades.
 ## The IPC surface
 
 The complete list of privileged operations is `src/common/ipc.ts`. The preloads
-expose exactly those as named, fixed-arity functions. There is deliberately no
-generic `invoke(channel, …)` escape hatch, so the privileged surface is
-reviewable as a diff.
+expose exactly those as named, fixed-arity functions. There is no generic
+`invoke(channel, …)` escape hatch, so the privileged surface is reviewable as a
+diff.
 
-There are two bridges, and they are not the same size. The settings panel gets
-the full list. The switcher strip, which is the one view of ours that sits over
-Discord's page all the time, gets two methods: move to a named side, and be told
-which side is showing. It cannot read the ledger, touch policy, or change the
-layout mode.
+The three bridges are not the same size. The settings panel gets the full list.
+The switcher strip, the one view of ours that sits over Discord's page all the
+time, gets two methods: move to a named side, and be told which side is
+showing. The lock screen gets two as well: attempt an unlock, and be told the
+vault's public state. Neither can read the ledger or touch policy.
 
 Every handler in `src/main/ipc.ts` treats its argument as hostile: channel ids
 are checked against a known set, policies go through `normalizePolicy`, and

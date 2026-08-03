@@ -3,11 +3,10 @@ import { app } from "electron";
 import type { PrivacyPolicy, WebRtcPolicy } from "../common/policy";
 
 /**
- * Command-line switches have to be set before Chromium starts, which means
- * before `app.whenReady()` and before we know which profile the user will pick.
- * They are therefore driven by the *global* policy only; per-profile overrides
- * apply to everything else (request filtering, permissions, headers) but not to
- * these process-wide flags. That asymmetry is called out in docs/PRIVACY.md.
+ * Chromium switches have to be set before `app.whenReady()`, and therefore
+ * before we know which profile the user will pick. They follow the *global*
+ * policy only; per-profile overrides cover request filtering, permissions and
+ * headers, but never these. The asymmetry is called out in docs/PRIVACY.md.
  */
 
 function webRtcSwitch(policy: WebRtcPolicy): string | null {
@@ -21,81 +20,58 @@ function webRtcSwitch(policy: WebRtcPolicy): string | null {
   }
 }
 
+/** Chromium features we turn off, with the reason each one is here. */
+const DISABLED_FEATURES = [
+  "PrivacySandboxSettings4", // ad-privacy stack; only ever profiling surface
+  "InterestFeedContentSuggestions",
+  "Translate",
+  "MediaRouter", // probes the LAN for cast devices at startup
+  "OptimizationHints", // sends page-load timing to Google
+  "AutofillServerCommunication", // asks a Google endpoint to classify form fields
+  "NetworkTimeServiceQuerying", // queries a Google time server
+  "SegmentationPlatform", // on-device behavioural modelling
+  /*
+   * Conditional mediation is the passkey prompt that fires by itself when a
+   * login page loads. Discord's "log in with a passkey" link uses a different
+   * mediation mode and still works with these off.
+   */
+  "WebAuthenticationConditionalUI",
+  "WebAuthenticationPasskeyUpgrade",
+  "WebAuthenticationImmediateGet",
+];
+
 export function applyChromiumSwitches(policy: PrivacyPolicy): void {
-  // Renderers must never have Node. `enableSandbox` makes this the default for
-  // every window, not something each BrowserWindow has to remember.
+  // Makes the sandbox the process-wide default instead of something every
+  // window has to remember.
   app.enableSandbox();
 
-  /**
-   * Site isolation, stated rather than assumed.
-   *
-   * It is Chromium's answer to Spectre and to a compromised renderer reading
-   * another origin's memory, and it is on by default — but "on by default" is
-   * a fact about the version we happen to ship, not a guarantee. Naming it
-   * means a future default flip, or an embedder that turns it off, cannot
-   * quietly cost us the property.
+  /*
+   * Site isolation is already Chromium's default. Naming it means a future
+   * default flip cannot cost us Spectre and cross-origin memory protection
+   * without the diff saying so.
    */
   app.commandLine.appendSwitch("site-per-process");
 
-  const disabledFeatures = [
-    // Chromium's ad-privacy stack. We are not an ad platform; these only ever
-    // create profiling surface.
-    "PrivacySandboxSettings4",
-    "InterestFeedContentSuggestions",
-    "Translate",
-    // Media Router probes the LAN for cast devices on startup.
-    "MediaRouter",
-    // Sends page-load timing to Google for "optimization hints".
-    "OptimizationHints",
-    // Conditional mediation is the passkey prompt that fires on its own when a
-    // login page loads, before you have asked for anything. Discord's login
-    // screen also has a normal "log in with a passkey" link, which uses a
-    // different mediation mode and keeps working with these off.
-    "WebAuthenticationConditionalUI",
-    "WebAuthenticationPasskeyUpgrade",
-    "WebAuthenticationImmediateGet",
-    // Autofill talks to a Google endpoint to classify form fields. We have one
-    // login form and it is Discord's; nothing here needs a server's opinion.
-    "AutofillServerCommunication",
-    // Queries a Google time server to detect a skewed clock.
-    "NetworkTimeServiceQuerying",
-    // On-device behavioural modelling, for features a chat client does not have.
-    "SegmentationPlatform",
-  ];
+  // An unrecognized name here is ignored, so the list degrades to a no-op
+  // across Chromium versions. A typo is silent.
+  app.commandLine.appendSwitch("disable-features", DISABLED_FEATURES.join(","));
 
-  /**
-   * An unrecognized feature name is ignored rather than rejected, so this list
-   * degrades to a no-op across Chromium versions instead of failing to start.
-   * Convenient, and worth knowing: a typo here is silent.
-   */
-  app.commandLine.appendSwitch("disable-features", disabledFeatures.join(","));
-
-  /**
-   * The umbrella over Chromium's background traffic: variations, component and
-   * extension updates, and the rest of the periodic fetches that happen with no
-   * page open. Several of the individual switches below are inside it; they are
-   * kept because they are the ones worth being explicit about.
-   */
+  // Variations, component and extension updates, and the rest of the periodic
+  // fetches that happen with no page open.
   app.commandLine.appendSwitch("disable-background-networking");
-  // Field-trial configuration is fetched and changes behaviour between runs.
-  // A client whose privacy posture is the product should not vary by lottery.
+  // Field trials change behaviour between runs. A privacy posture should not
+  // vary by lottery.
   app.commandLine.appendSwitch("disable-field-trial-config");
-
-  // Chromium reports network-error statistics back to Google by default.
   app.commandLine.appendSwitch("disable-domain-reliability");
-  // No background component/extension updates.
   app.commandLine.appendSwitch("disable-component-update");
-  // `<a ping>` and hyperlink auditing.
-  app.commandLine.appendSwitch("no-pings");
-  // Never let a crash handler upload anything.
+  app.commandLine.appendSwitch("no-pings"); // `<a ping>` and hyperlink auditing
   app.commandLine.appendSwitch("disable-breakpad");
   app.commandLine.appendSwitch("disable-crash-reporter");
 
   const rtc = webRtcSwitch(policy.webrtc);
   if (rtc) app.commandLine.appendSwitch("force-webrtc-ip-handling-policy", rtc);
 
-  // Keep mDNS-obfuscated ICE candidates on: they hide the LAN address from the
-  // peer while still allowing local connectivity. Explicit so that a future
-  // Chromium default flip does not silently change our posture.
+  // mDNS-obfuscated ICE candidates hide the LAN address from the peer while
+  // keeping local connectivity. Set explicitly so a default flip is visible.
   app.commandLine.appendSwitch("enable-features", "WebRtcHideLocalIpsWithMdns");
 }

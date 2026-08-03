@@ -145,7 +145,7 @@ app.whenReady().then(() => {
      * the profile views are torn down so Chromium stops writing underneath the
      * snapshot, and the exit happens once the ciphertext is on disk.
      *
-     * If sealing fails the plaintext is deliberately left alone and the app
+     * If sealing fails the plaintext is left alone and the app
      * still exits. An unsealed profile is a privacy problem; a half-deleted one
      * is a lost account.
      */

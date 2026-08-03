@@ -48,7 +48,7 @@ const RULE_KEYS = new Set(["http", "https", "ftp", "socks"]);
 /**
  * Validates one entry of a Chromium proxy rule list.
  *
- * Deliberately strict. Credentials are rejected outright: Chromium does not
+ * Strict by design. Credentials are rejected outright: Chromium does not
  * support them in proxy rules, so accepting `user:pass@host` would silently
  * drop the credentials *and* the user's expectation of authentication.
  */

@@ -35,9 +35,9 @@ which theme is in use. The overlays are re-raised after any view is mounted
 underneath them, because `addChildView` moves an existing child to the front.
 
 The lock screen is opaque and is raised last unconditionally. When a vault is
-configured it goes up before any profile view is created at all — creating one
-opens its `persist:` partition, and the whole point is that the partition does
-not exist in readable form until a passphrase has been given.
+configured it goes up before any profile view is created at all. Creating one
+opens its `persist:` partition, and the partition should not exist in readable
+form until a passphrase has been given.
 
 ### Why the Discord view has no preload
 
@@ -55,9 +55,9 @@ This is the decision the rest of the design hangs off. It buys three things:
    that wanted to disable Ghost Mode has nothing to call.
 
 The cost is that anything needing page context is out of scope by
-construction: themes that read the DOM, plugins, patched components. That is a
-trade, not an oversight. User CSS is supported via
-`webContents.insertCSS`, which injects styles and never script.
+construction: themes that read the DOM, plugins, patched components. A trade,
+made knowingly. User CSS still works via `webContents.insertCSS`, which injects
+styles and never script.
 
 ### Why profiles are sessions, not tabs
 
