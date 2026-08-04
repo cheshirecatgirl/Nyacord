@@ -9,7 +9,7 @@ import type { AppShell } from "./window";
  * The Settings menu lists the panes in the same order as the panel's own
  * sidebar, so the two never disagree about where anything is.
  */
-export function buildMenu(shell: AppShell): void {
+export function buildMenu(shell: AppShell, devMode: boolean): void {
   const isMac = process.platform === "darwin";
 
   const template: MenuItemConstructorOptions[] = [
@@ -71,6 +71,22 @@ export function buildMenu(shell: AppShell): void {
         { role: "zoomOut" },
         { type: "separator" },
         { role: "togglefullscreen" },
+        /*
+         * Only in dev mode. Tuning the layout stylesheet means inspecting
+         * Discord's markup, and this is the only route to it; in a normal build
+         * DevTools are closed on sight, because "open the console and paste
+         * this" is how Discord accounts get stolen.
+         */
+        ...(devMode
+          ? ([
+              { type: "separator" },
+              {
+                label: "Toggle DevTools (Discord view)",
+                accelerator: "CmdOrCtrl+Shift+D",
+                click: () => shell.toggleDevTools(),
+              },
+            ] satisfies MenuItemConstructorOptions[])
+          : []),
       ],
     },
   ];

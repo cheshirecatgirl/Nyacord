@@ -107,7 +107,7 @@ app.whenReady().then(() => {
   });
 
   registerIpc(shell, config, profiles, ledger, vault, configureDns);
-  buildMenu(shell);
+  buildMenu(shell, devMode);
 
   tray = new AppTray(shell);
   tray.create();

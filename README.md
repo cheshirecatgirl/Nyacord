@@ -126,7 +126,8 @@ npm run dist          # package for the current platform
 
 `test:e2e` and `test:packaged` need a display and a non-root user, since
 Chromium's sandbox will not run as root. On a headless box, prefix them with
-`xvfb-run -a`.
+`xvfb-run -a`. [DEVELOPMENT.md](docs/DEVELOPMENT.md) has the full setup,
+including the system libraries Electron needs on a minimal Linux image.
 
 ### Portable mode
 
@@ -163,6 +164,7 @@ OS location and says so in **About**.
 
 | | |
 | --- | --- |
+| [DEVELOPMENT.md](docs/DEVELOPMENT.md) | Setting up a machine, the commands, tuning the selectors |
 | [RESEARCH.md](docs/RESEARCH.md) | The client landscape, what Discord sends, why this design |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Process layout, module map, request pipeline |
 | [PRIVACY.md](docs/PRIVACY.md) | What is blocked, and what cannot be |

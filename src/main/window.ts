@@ -517,6 +517,24 @@ export class AppShell {
     this.syncSwitcher();
   }
 
+  /**
+   * Opens DevTools on the Discord view, which is the only place the layout
+   * selectors can be inspected.
+   *
+   * Detached, because docking would resize a `WebContentsView` whose bounds we
+   * own. Reachable only in dev mode: `index.ts` closes DevTools on sight
+   * otherwise, so that nobody can be talked into pasting a token stealer into
+   * a console they were told to open.
+   */
+  toggleDevTools(): void {
+    if (this.lockShown) return;
+    const id = this.profiles.activeId();
+    const contents = id ? this.views.get(id)?.view.webContents : undefined;
+    if (!contents || contents.isDestroyed()) return;
+    if (contents.isDevToolsOpened()) contents.closeDevTools();
+    else contents.openDevTools({ mode: "detach" });
+  }
+
   reloadActive(): void {
     if (this.lockShown) return;
     const id = this.profiles.activeId();

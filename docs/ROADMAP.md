@@ -96,8 +96,8 @@ whether the selectors match. Discord's class names are hashes that change on
 every deploy and differ per release channel, so the shipped rules are a
 starting point, not an answer.
 
-The stylesheet reports its own state to make that easy to tell apart. In
-DevTools on the Discord view:
+The stylesheet reports its own state to make that easy to tell apart. Run
+`npm run dev`, open **View > Toggle DevTools (Discord view)**, and ask it:
 
 ```js
 getComputedStyle(document.documentElement).getPropertyValue("--nya-side")

@@ -26,7 +26,7 @@
  * ---------------------------------------------------------------------------
  * IS IT WORKING?
  *
- * Open DevTools on the Discord view and run:
+ * Run `npm run dev`, then View > Toggle DevTools (Discord view), and run:
  *
  *   getComputedStyle(document.documentElement).getPropertyValue('--nya-side')
  *
