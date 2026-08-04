@@ -56,6 +56,13 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
  * A child view as seen from inside a main-process `evaluate`. Electron's
  * `View` type does not expose `webContents`, and the callback is compiled here
  * not where it runs.
+ *
+ * The Discord view is picked out of the window's children by being the only one
+ * not served from `nya://`, our own UI scheme. Indexing used to be enough, but
+ * the window now also holds the strip and the lock screen, and views change
+ * order as they are raised over each other. The predicate is repeated at each
+ * call site, not shared, because `app.evaluate` ships only the callback's own
+ * source and nothing it closes over comes with it.
  */
 interface MainView {
   webContents: {
@@ -65,17 +72,6 @@ interface MainView {
     session: { resolveProxy(url: string): Promise<string> };
   };
 }
-
-/**
- * The Discord view is picked out of the window's children by being the only one
- * that is not a `file://` page of ours. Indexing used to be enough, but the
- * window now also holds the switcher strip, and views change order as they are
- * raised over each other.
- *
- * The predicate is repeated at each call site rather than shared, because
- * `app.evaluate` ships only the callback's own source to the main process and
- * nothing it closes over comes with it.
- */
 
 /** Polls until `check` returns something truthy, so tests do not race the UI. */
 async function until<T>(check: () => Promise<T> | T, timeoutMs = 15_000): Promise<NonNullable<T>> {
@@ -276,7 +272,7 @@ describe("switcher strip", () => {
     return app.evaluate(({ BaseWindow }, property) => {
       const view = (
         BaseWindow.getAllWindows()[0]?.contentView.children as unknown as MainView[]
-      ).find((child) => !(child.webContents?.getURL() ?? "file://").startsWith("file://"));
+      ).find((child) => !(child.webContents?.getURL() ?? "nya://").startsWith("nya://"));
       if (!view) throw new Error("no Discord view");
       return view.webContents.executeJavaScript(
         `getComputedStyle(document.documentElement).getPropertyValue(${JSON.stringify(property)}).trim()`,
@@ -488,7 +484,7 @@ describe("request filtering", () => {
       .evaluate(({ BaseWindow }) => {
         const view = (
           BaseWindow.getAllWindows()[0]?.contentView.children as unknown as MainView[]
-        ).find((child) => !(child.webContents?.getURL() ?? "file://").startsWith("file://"));
+        ).find((child) => !(child.webContents?.getURL() ?? "nya://").startsWith("nya://"));
         if (!view) throw new Error("no Discord view");
         return view.webContents.loadURL("https://discord.com/api/v9/science");
       })
@@ -526,7 +522,7 @@ describe("proxy", () => {
     const resolved = await app.evaluate(({ BaseWindow }) => {
       const view = (
         BaseWindow.getAllWindows()[0]?.contentView.children as unknown as MainView[]
-      ).find((child) => !(child.webContents?.getURL() ?? "file://").startsWith("file://"));
+      ).find((child) => !(child.webContents?.getURL() ?? "nya://").startsWith("nya://"));
       if (!view) throw new Error("no Discord view");
       return view.webContents.session.resolveProxy("https://discord.com/app");
     });

@@ -225,6 +225,13 @@ describe("sealing a profile", () => {
     const base = mkdtempSync(join(tmpdir(), "nya-vault-"));
     try {
       seedProfile(join(base, "Partitions"));
+      // Enough entries that extraction is still in flight when the GCM tag
+      // fails at the very end. With only a handful of files the teardown race
+      // this guards against reproduced perhaps one run in five.
+      mkdirSync(join(base, "Partitions", "nya-abc", "IndexedDB"), { recursive: true });
+      for (let i = 0; i < 300; i += 1) {
+        writeFileSync(join(base, "Partitions", "nya-abc", "IndexedDB", `${i}.ldb`), randomBytes(512));
+      }
       const vault = makeVault(base);
       await vault.enable("correct horse battery staple");
       await vault.seal();
@@ -241,6 +248,8 @@ describe("sealing a profile", () => {
       assert.equal(result.ok === false && result.reason, "corrupt");
       // Staging is what buys this: nothing unauthenticated reaches the profile.
       assert.equal(existsSync(join(base, "Partitions")), false);
+      // And nothing in flight may recreate the staging tree after the failure.
+      await new Promise((resolve) => setTimeout(resolve, 250));
       assert.equal(existsSync(join(base, "Partitions.opening")), false);
     } finally {
       rmSync(base, { recursive: true, force: true });

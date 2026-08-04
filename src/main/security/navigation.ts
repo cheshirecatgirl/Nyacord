@@ -59,7 +59,7 @@ function allowed(url: string, channel: ChannelDef): boolean {
 }
 
 /**
- * Applied to our own internal UI, which is loaded from `file:` and must never
+ * Applied to our own internal UI, served from `nya://ui`, which must never
  * navigate anywhere at all.
  */
 export function freezeNavigation(contents: WebContents): void {

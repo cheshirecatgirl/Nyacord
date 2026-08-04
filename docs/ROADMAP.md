@@ -32,6 +32,8 @@ What exists, what does not, and what will not.
 - 101 unit tests over the pure policy, rule, network, appearance, stylesheet
   and vault modules
 - 34 end-to-end tests that launch the real app, committed and wired into CI
+- 2 smoke tests against a packaged, fully-fused build, which is the only place
+  a whole class of fuse-dependent bug is visible
 
 The end-to-end suite is the one that matters for regressions: it asserts the
 panel opens on the requested pane, the preload bridge exists, profiles are

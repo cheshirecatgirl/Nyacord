@@ -113,6 +113,13 @@ Electron binary into a general-purpose Node interpreter, and `NODE_OPTIONS`
 injects a module into the process from the environment. Both are off, along
 with `--inspect`, plus ASAR integrity validation and `OnlyLoadAppFromAsar`.
 
+`GrantFileProtocolExtraPrivileges` is off too, which costs more than it sounds:
+asar path resolution is one of the privileges it removes, so a packaged build
+could not load its own UI from `file://` at all. Rather than turn it back on,
+the UI moved to a private `nya://ui` scheme served from the main process, with
+an allowlist of nine filenames. `file:` stays de-privileged and our pages gain
+a real origin.
+
 **Gap one: patch lag.** Electron ships a Chromium branch and picks up security
 fixes when Electron cuts a release. Chrome updates faster. There is no way for
 a downstream project to close this. The mitigation is to track Electron

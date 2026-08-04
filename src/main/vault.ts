@@ -410,6 +410,16 @@ class EntrySink extends Writable {
   private buffered: Buffer = Buffer.alloc(0);
   private remaining = 0;
   private file: import("node:fs").WriteStream | null = null;
+  /**
+   * Set the moment the pipeline gives up, which for a tampered vault is when
+   * GCM checks its tag at the very end.
+   *
+   * The caller deletes the staging directory as soon as the pipeline rejects,
+   * so anything still in flight here would be creating files under a directory
+   * that no longer exists. Without this the ENOENT surfaced after the work had
+   * finished, as an uncaught exception nobody was left to catch.
+   */
+  private stopped = false;
 
   constructor(private readonly root: string) {
     super();
@@ -420,6 +430,10 @@ class EntrySink extends Writable {
     _encoding: BufferEncoding,
     callback: (error?: Error | null) => void,
   ): void {
+    if (this.stopped) {
+      callback();
+      return;
+    }
     this.buffered = this.buffered.length === 0 ? chunk : Buffer.concat([this.buffered, chunk]);
     this.drain().then(
       () => callback(),
@@ -438,8 +452,19 @@ class EntrySink extends Writable {
     );
   }
 
+  override _destroy(
+    error: Error | null,
+    callback: (error?: Error | null) => void,
+  ): void {
+    this.stopped = true;
+    const file = this.file;
+    this.file = null;
+    file?.destroy();
+    callback(error);
+  }
+
   private async drain(): Promise<void> {
-    for (;;) {
+    while (!this.stopped) {
       if (this.remaining > 0) {
         const take = Math.min(this.remaining, this.buffered.length);
         if (take === 0) return;
@@ -457,6 +482,8 @@ class EntrySink extends Writable {
     }
   }
 
+  // Every await below is a place the pipeline can fail underneath us, so each
+  // one is followed by a check before touching the filesystem again.
   private async begin(entry: EntryHeader): Promise<void> {
     const target = join(this.root, ...entry.path.split(posix.sep));
 
@@ -466,13 +493,20 @@ class EntrySink extends Writable {
     }
 
     await mkdir(dirname(target), { recursive: true, mode: 0o700 });
+    if (this.stopped) return;
+
     if (entry.size === 0) {
       await writeFile(target, "", { mode: 0o600 });
       return;
     }
 
     this.remaining = entry.size;
-    this.file = createWriteStream(target, { mode: 0o600 });
+    const file = createWriteStream(target, { mode: 0o600 });
+    // The open happens asynchronously, so it can still fail after the staging
+    // directory has gone. Swallow it here; the pipeline's own error is the one
+    // that matters and is already on its way.
+    file.on("error", () => {});
+    this.file = file;
   }
 
   private writeFileChunk(chunk: Buffer): Promise<void> {

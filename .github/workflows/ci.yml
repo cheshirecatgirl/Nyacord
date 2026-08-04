@@ -62,3 +62,27 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y xvfb
 
       - run: xvfb-run -a npm run test:e2e
+
+  packaged:
+    name: Packaged build
+    runs-on: ubuntu-latest
+
+    # The e2e job runs an unpackaged Electron with no fuses flipped, which hides
+    # anything that only breaks once the app is a real artifact. That is not
+    # hypothetical: with GrantFileProtocolExtraPrivileges off, file:// URLs
+    # inside an asar stop resolving, and every UI page failed in packaged builds
+    # while working in development. This job is what notices.
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - run: npm ci
+
+      - run: sudo apt-get update && sudo apt-get install -y xvfb
+
+      - run: xvfb-run -a npm run test:packaged

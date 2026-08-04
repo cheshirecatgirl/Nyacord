@@ -18,7 +18,8 @@
     "test": "npm run build && node --test \"dist/test/*.test.js\"",
     "test:e2e": "npm run build && node --test \"dist/test/e2e/*.e2e.js\"",
     "dist": "npm run build && electron-builder",
-    "dist:dir": "npm run build && electron-builder --dir"
+    "dist:dir": "npm run build && electron-builder --dir",
+    "test:packaged": "npm run dist:dir && node --test \"dist/test/packaged/*.test.js\""
   },
   "devDependencies": {
     "@electron/fuses": "^2.1.3",

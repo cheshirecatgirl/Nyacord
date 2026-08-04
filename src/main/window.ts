@@ -35,6 +35,7 @@ import { ViewWatchdog } from "./reliability/watchdog";
 import { normalizeProxy, type ProxyConfig } from "../common/network";
 import { containNavigation, freezeNavigation } from "./security/navigation";
 import type { LayoutStyles } from "./layout";
+import { SHELL_PARTITION, UI_ORIGIN } from "./ui-protocol";
 import { applyProxy, configureSession, wipeSessionData } from "./security/session";
 import type { JsonStore } from "./store";
 
@@ -347,7 +348,7 @@ export class AppShell {
       webPreferences: {
         ...HARDENED_PREFS,
         preload: join(__dirname, "..", "preload", "lock.js"),
-        partition: "nya-shell",
+        partition: SHELL_PARTITION,
       },
     });
 
@@ -355,7 +356,7 @@ export class AppShell {
     view.setBackgroundColor(chromeBackground());
     freezeNavigation(view.webContents);
     view.webContents.on("did-finish-load", () => this.pushVault());
-    void view.webContents.loadFile(join(__dirname, "..", "renderer", "lock.html"));
+    void view.webContents.loadURL(`${UI_ORIGIN}/lock.html`);
 
     this.lock = view;
     return view;
@@ -632,7 +633,7 @@ export class AppShell {
         preload: join(__dirname, "..", "preload", "shell.js"),
         // The panel is our own local UI; it never loads remote content, so it
         // gets a dedicated in-memory partition with no cookies at all.
-        partition: "nya-shell",
+        partition: SHELL_PARTITION,
       },
     });
 
@@ -643,7 +644,7 @@ export class AppShell {
       view.webContents.once("did-finish-load", () => resolve());
       view.webContents.once("did-fail-load", () => resolve());
     });
-    void view.webContents.loadFile(join(__dirname, "..", "renderer", "shell.html"));
+    void view.webContents.loadURL(`${UI_ORIGIN}/shell.html`);
     this.shell = view;
     return view;
   }
@@ -716,7 +717,7 @@ export class AppShell {
         preload: join(__dirname, "..", "preload", "switcher.js"),
         // Shares the panel's cookie-less in-memory partition. Both are local
         // file:// UI of ours; neither ever loads anything remote.
-        partition: "nya-shell",
+        partition: SHELL_PARTITION,
       },
     });
 
@@ -725,7 +726,7 @@ export class AppShell {
     view.setBackgroundColor("#00000000");
     freezeNavigation(view.webContents);
     view.webContents.on("did-finish-load", () => this.pushSwitcher());
-    void view.webContents.loadFile(join(__dirname, "..", "renderer", "switcher.html"));
+    void view.webContents.loadURL(`${UI_ORIGIN}/switcher.html`);
 
     this.switcher = view;
     return view;

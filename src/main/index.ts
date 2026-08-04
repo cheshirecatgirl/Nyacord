@@ -1,4 +1,4 @@
-import { app, net, powerMonitor } from "electron";
+import { app, net, powerMonitor, session } from "electron";
 import { join } from "node:path";
 
 import { openConfig } from "./config";
@@ -11,6 +11,7 @@ import { ProfileStore } from "./profiles";
 import { applyChromiumSwitches } from "./switches";
 import { AppTray } from "./tray";
 import { ProfileVault } from "./vault";
+import { SHELL_PARTITION, registerUiScheme, serveUi } from "./ui-protocol";
 import { AppShell } from "./window";
 
 /**
@@ -30,6 +31,8 @@ const devMode = process.argv.includes("--dev") && !app.isPackaged;
 initializePaths();
 const config = openConfig();
 applyChromiumSwitches(config.get().policy);
+// Like the switches, this has to precede `app.whenReady()`.
+registerUiScheme();
 
 /**
  * The single-instance lock is keyed on the user-data directory, which means
@@ -67,6 +70,10 @@ function configureDns(): void {
 
 app.whenReady().then(() => {
   configureDns();
+
+  // The three UI views share one cookie-less partition; the scheme is served
+  // on it, so nothing else in the app can reach our markup.
+  serveUi(session.fromPartition(SHELL_PARTITION), join(__dirname, "..", "renderer"));
 
   const ledger = new PrivacyLedger();
   const profiles = new ProfileStore(config);

@@ -14,10 +14,19 @@ main process  ── privileged. Owns config, policy, sessions, filtering.
    └── BaseWindow
         ├── WebContentsView  (profile "work"   → persist:nya-a1b2)  ← Discord, NO preload
         ├── WebContentsView  (profile "canary" → persist:nya-c3d4)  ← Discord, NO preload
-        ├── WebContentsView  (switcher strip, file://, partition "nya-shell") ← 240×40, top-left
-        ├── WebContentsView  (shell UI,       file://, partition "nya-shell") ← settings panel
-        └── WebContentsView  (lock screen,    file://, partition "nya-shell") ← opaque, always topmost
+        ├── WebContentsView  (switcher strip, nya://ui, partition "nya-shell") ← 240×40, top-left
+        ├── WebContentsView  (shell UI,       nya://ui, partition "nya-shell") ← settings panel
+        └── WebContentsView  (lock screen,    nya://ui, partition "nya-shell") ← opaque, always topmost
 ```
+
+Our own UI is served from a private `nya://` scheme, not from `file://`. The
+reason is a fuse: `GrantFileProtocolExtraPrivileges` is off, and asar path
+resolution turns out to be one of the privileges it removes, so
+`file://…/app.asar/…/shell.html` fails with `ERR_FILE_NOT_FOUND` in a packaged
+build while working unpackaged. Serving from `nya://ui` fixes that without
+re-granting anything: the panel, the strip and the lock screen get a real
+origin, `'self'` in their CSP resolves to it, and only nine allowlisted
+filenames are servable. `test/packaged/smoke.test.ts` is the guard.
 
 Only one profile view is attached to the window at a time; switching profiles
 swaps which child view is mounted instead of reloading anything, so background
@@ -93,6 +102,7 @@ cannot point a profile at an attacker-chosen partition.
 | `src/common/vault.ts` | The vault format: KDF, cipher, archive framing, path safety |
 | `src/common/passphrase.ts` | Strength rating and lockout curve. Split out because the panel is a browser bundle and cannot pull in `node:crypto` |
 | `src/main/vault.ts` | Sealing and opening the profile tree on disk |
+| `src/main/ui-protocol.ts` | Serves our own UI over `nya://ui`, and names the shell partition |
 | `src/preload/shell.ts` | The settings panel's bridge. Attached only to our own UI |
 | `src/preload/switcher.ts` | The strip's bridge: two methods |
 | `src/preload/lock.ts` | The lock screen's bridge: attempt an unlock, be told the state |

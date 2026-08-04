@@ -117,14 +117,16 @@ Needs Node 20 or newer.
 
 ```bash
 npm install
-npm start          # build and run
-npm test           # 101 unit tests over the pure modules
-npm run test:e2e   # 34 end-to-end tests against the real app
-npm run dist       # package for the current platform
+npm start             # build and run
+npm test              # 101 unit tests over the pure modules
+npm run test:e2e      # 34 end-to-end tests against the real app
+npm run test:packaged # 2 smoke tests against a packaged, fused build
+npm run dist          # package for the current platform
 ```
 
-`test:e2e` needs a display and a non-root user, since Chromium's sandbox will
-not run as root. On a headless box, prefix it with `xvfb-run -a`.
+`test:e2e` and `test:packaged` need a display and a non-root user, since
+Chromium's sandbox will not run as root. On a headless box, prefix them with
+`xvfb-run -a`.
 
 ### Portable mode
 
